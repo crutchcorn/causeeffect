@@ -1,5 +1,5 @@
 {
-  "name": "@org/source",
+  "name": "@causeeffect/root",
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {},
@@ -27,9 +27,6 @@
     "vite": "^8.1.4",
     "vitest": "~4.1.10"
   },
-  "workspaces": [
-    "packages/*"
-  ],
   "nx": {
     "includedScripts": [],
     "targets": {
