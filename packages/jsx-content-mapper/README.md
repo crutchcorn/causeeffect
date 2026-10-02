@@ -6,7 +6,7 @@ the mapper lowers JSX to ordinary calls so every expression retains its own type
 The SDK supplies the server protocol and UTF-8/UTF-16 source mappings.
 
 ```tsx
-// example.gtsx
+// src/example.gtsx
 import type { JSX } from '@causeeffect/jsx-content-mapper/runtime';
 
 function* Test() {
@@ -30,14 +30,14 @@ including a `never` next type when that is intended.
 ## Setup
 
 Requires Node.js `^22.18.0 || >=24.11.0` and a TypeScript 7.1 nightly supporting
-content mappers. The tests pin `7.1.0-dev.20261002.1`; the upstream protocol is
-experimental. Stable TypeScript 6 builds the mapper itself.
+content mappers. The setup below pins `7.1.0-dev.20261002.1`; the upstream protocol
+is experimental.
 
 Install this package in the consuming project and use a nightly compiler:
 
 ```sh
-pnpm add @causeeffect/jsx-content-mapper
-pnpm add -D typescript@7.1.0-dev.20261002.1
+npm install @causeeffect/jsx-content-mapper
+npm install --save-dev --save-exact typescript@7.1.0-dev.20261002.1
 ```
 
 The consuming `tsconfig.json` registers the **`.gtsx`** extension at the top level:
@@ -61,7 +61,22 @@ The consuming `tsconfig.json` registers the **`.gtsx`** extension at the top lev
 ```
 
 ```sh
-pnpm exec tsc --noEmit --runExternalCode
+npm exec --package=typescript@7.1.0-dev.20261002.1 -- tsc --noEmit --runExternalCode
+```
+
+For regular checks, add a script to your application's `package.json`. npm runs
+the compiler installed by the pinned development dependency:
+
+```json
+{
+  "scripts": {
+    "typecheck": "tsc --noEmit --runExternalCode"
+  }
+}
+```
+
+```sh
+npm run typecheck
 ```
 
 `--runExternalCode` lets TypeScript start the mapper's Node process. No `jsx`
@@ -180,9 +195,13 @@ uses the factory's call signature, including its overloads and return type.
 
 ## Effect v4
 
-Effect is a development dependency only. The mapper keeps the actual yielded
-Effect, including its error and service types, available for a future Effect
-renderer:
+Install Effect in your application to use its yielded operations. The mapper
+keeps the actual yielded Effect, including its error and service types, available
+for a future Effect renderer:
+
+```sh
+npm install effect@4.0.0
+```
 
 ```tsx
 import { Effect } from 'effect';
@@ -212,8 +231,8 @@ const program = Effect.gen(View);
 ```
 
 The `any` next type comes from Effect v4's iterator protocol and is preserved too.
-The integration tests compile this pattern against Effect **4.0.0**. Effect types
-may require `"lib": ["es2022", "esnext.disposable"]` in the consuming configuration.
+This pattern supports Effect **4.0.0**. Effect types may require
+`"lib": ["es2022", "esnext.disposable"]` in the consuming configuration.
 
 ## JavaScript builds and declarations
 
@@ -225,6 +244,10 @@ declaration maps pointing to the original `.gtsx` file.
 The package includes a Vite 8 plugin that uses the same transform and options,
 then erases TypeScript with Vite's Oxc transformer:
 
+```sh
+npm install --save-dev vite@^8.1.4
+```
+
 ```ts
 // vite.config.ts
 import { defineConfig } from 'vite';
@@ -235,12 +258,45 @@ export default defineConfig({
 });
 ```
 
+Import `.gtsx` files from your application entry point:
+
+```ts
+// src/main.ts
+import { Result } from './example.gtsx';
+
+console.log(Result);
+```
+
+For a new Vite application, add an `index.html` at the project root that loads
+that entry point:
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>GTSX example</title>
+  </head>
+  <body>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
+```
+
+Start Vite or build the application:
+
+```sh
+npm exec -- vite
+npm exec -- vite build
+```
+
 Use identical JSX options in the plugin and `contentMappers` configuration.
 The plugin supports development, production builds, dependency scanning,
 extensionless `.gtsx` imports, and source maps to the original files. Vite's
 `?raw` and `?url` imports retain their usual behavior. See
-[`examples/foldkit`](../../examples/foldkit) for a classic factory that binds to
-each view's typed builder; the mapper itself has no Foldkit dependency.
+[`examples/foldkit`](https://github.com/crutchcorn/causeeffect/tree/main/examples/foldkit)
+for a classic factory that binds to each view's typed builder; the mapper itself
+has no Foldkit dependency.
 
 Use the public transform in a build-tool integration, then transpile the returned
 TypeScript with TypeScript, Babel, SWC, or another TypeScript-aware tool:
@@ -256,20 +312,4 @@ const output = transformGtsx(source, { fileName: 'example.gtsx' });
 ```
 
 Check diagnostics before transpiling, and resolve `.gtsx` imports in the build-tool
-integration. The integration tests separately compile the virtual `.ts` output and
-execute it to verify runtime behavior.
-
-## Working in this repository
-
-```sh
-pnpm install
-pnpm --filter @causeeffect/jsx-content-mapper build
-pnpm --filter @causeeffect/jsx-content-mapper typecheck
-pnpm --filter @causeeffect/jsx-content-mapper test
-pnpm --filter @causeeffect/jsx-content-mapper lint
-```
-
-Tests cover runtime behavior, JSX semantics and source mappings, plus actual
-TypeScript 7.1 mapper discovery, `.gtsx` imports, declaration emit, original-source
-diagnostics, generator generics, and Effect v4 compatibility. They build the mapper
-before invoking the nightly compiler; no global nightly installation is needed.
+integration.

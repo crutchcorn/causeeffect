@@ -5,11 +5,20 @@ separate, Foldkit-specific JSX adapter. Both the application View and reusable
 counter Submodel live in `.gtsx` files. Two instances have independent state and
 message boundaries; a parent action resets both through their child updates.
 
-From the repository root:
+This is a private reference application in the CauseEffect repository, not a
+published npm package. To add Foldkit JSX to your own application, follow the
+[adapter's npm setup](https://github.com/crutchcorn/causeeffect/blob/main/packages/foldkit-jsx/README.md#setup).
+
+## Run the example
+
+With Node.js 24.11 or newer and PNPM 10 installed:
 
 ```sh
+git clone https://github.com/crutchcorn/causeeffect.git
+cd causeeffect
 pnpm install
-pnpm --filter @causeeffect/foldkit-example dev
+cd examples/foldkit
+pnpm dev
 ```
 
 Vite prints the local URL. The example pins Foldkit `0.165.0`, Effect `4.0.0`, and
@@ -19,10 +28,13 @@ The example's `dev`, `build`, `typecheck`, and `test` scripts build their worksp
 dependencies first, so they work from a clean checkout immediately after install.
 
 ```sh
-pnpm --filter @causeeffect/foldkit-example typecheck
-pnpm --filter @causeeffect/foldkit-example test
-pnpm --filter @causeeffect/foldkit-example build
+pnpm typecheck
+pnpm test
+pnpm build
 ```
+
+Run these commands from `examples/foldkit`. To serve the built application
+locally, run `pnpm preview` after `pnpm build`.
 
 The typecheck runs the actual nightly compiler with `--runExternalCode` so it
 can start the content mapper. Vite uses the same transformation options for

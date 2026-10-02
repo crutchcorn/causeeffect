@@ -1,20 +1,96 @@
-# Foldkit JSX
+# @causeeffect/foldkit-jsx
 
 `@causeeffect/foldkit-jsx` adapts a [Foldkit view](https://foldkit.dev/core/view)'s typed `HtmlBuilder` to a classic JSX factory. Foldkit remains responsible for HTML, event handlers, dispatch boundaries, and [Submodels](https://foldkit.dev/core/submodel). The content mapper only translates JSX syntax into configurable factory calls.
 
+## Setup
+
+In your application's directory, install the adapter and Foldkit's runtime
+dependencies:
+
+```sh
+npm install @causeeffect/foldkit-jsx foldkit@0.165.0 effect@4.0.0 @effect/platform-browser@4.0.0
+npm install --save-dev @causeeffect/jsx-content-mapper vite@^8.1.4
+npm install --save-dev --save-exact typescript@7.1.0-dev.20261002.1
+```
+
+This setup requires Node.js `^22.18.0 || >=24.11.0`. TypeScript 7.1 content mappers
+are experimental; stable TypeScript cannot check `.gtsx` files yet. The pinned
+nightly above is the version used by the example and integration tests.
+`@effect/platform-browser` supplies the browser services used by Foldkit's
+application runtime.
+
 ## Configure `.gtsx`
 
-Pass these options to `@causeeffect/jsx-content-mapper` in your TypeScript content mapper configuration and to its Vite plugin:
+Create `tsconfig.json` in your application:
 
 ```json
 {
-  "jsxRuntime": "classic",
-  "jsxFactory": "jsx.createElement",
-  "jsxFragmentFactory": "jsx.Fragment"
+  "compilerOptions": {
+    "target": "es2022",
+    "lib": ["es2022", "dom", "esnext.disposable"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["vite/client"]
+  },
+  "contentMappers": [
+    {
+      "package": "@causeeffect/jsx-content-mapper",
+      "extensions": [".gtsx"],
+      "options": {
+        "jsxRuntime": "classic",
+        "jsxFactory": "jsx.createElement",
+        "jsxFragmentFactory": "jsx.Fragment"
+      }
+    }
+  ],
+  "include": ["src"]
 }
 ```
 
-Classic mode uses the factory expression in your file's scope. It does not inject a runtime import. See [the runnable Foldkit example](../../examples/foldkit/) for the complete TypeScript nightly and Vite setup.
+Create `vite.config.mts` with the same JSX options:
+
+```ts
+import { gtsx } from '@causeeffect/jsx-content-mapper/vite';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  plugins: [
+    gtsx({
+      jsxRuntime: 'classic',
+      jsxFactory: 'jsx.createElement',
+      jsxFragmentFactory: 'jsx.Fragment',
+    }),
+  ],
+});
+```
+
+Classic mode uses the factory expression in your file's scope. It does not inject
+a runtime import. Both TypeScript and Vite must use these classic options; the
+mapper's default generator runtime produces a different kind of element. The
+[mapper guide](https://github.com/crutchcorn/causeeffect/blob/main/packages/jsx-content-mapper/README.md)
+documents the transformation and available options.
+
+Add scripts to your application's `package.json`:
+
+```json
+{
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit --runExternalCode",
+    "build": "npm run typecheck && vite build",
+    "preview": "vite preview"
+  }
+}
+```
+
+`--runExternalCode` allows TypeScript to start the mapper's Node process. Vite
+transforms `.gtsx` for the browser, while the `typecheck` script checks the
+original files. No `jsx` compiler option is required.
 
 ## Views
 
@@ -102,13 +178,55 @@ return (
 
 The adapter never stores a process-wide builder. Create it in each root or child view and pass builders to extracted helpers as Foldkit recommends.
 
-## Verify
+## Run your application
 
-```sh
-pnpm --filter @causeeffect/foldkit-jsx build
-pnpm --filter @causeeffect/foldkit-jsx typecheck
-pnpm --filter @causeeffect/foldkit-jsx test
-pnpm --filter @causeeffect/foldkit-jsx lint
+Keep Foldkit's normal Model, init, and update functions, and export your JSX View
+from `src/app.gtsx`. Start the application from `src/main.ts`:
+
+```ts
+import { Runtime } from 'foldkit';
+import { Model, init, update, view } from './app.gtsx';
+
+const container = document.getElementById('root');
+if (!container) throw new Error('The application container is missing.');
+
+Runtime.run(Runtime.makeApplication({ Model, init, update, view, container }));
 ```
 
-The tests compare generated VNodes with Foldkit builders, check fragments and keying, drive a real Submodel event through Foldkit's Scene harness, and assert compile-time failures for mismatched messages, models, inputs, props, and children.
+Add the container and module entry point to your root `index.html`:
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Foldkit with GTSX</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
+```
+
+Check the app and start Vite from your application directory:
+
+```sh
+npm run typecheck
+npm run dev
+```
+
+Open the URL Vite prints. Use `npm run build` to check and bundle the app, then
+`npm run preview` to serve that build locally.
+
+For complete Model, Message, update, and Submodel implementations, see the
+[runnable Foldkit example](https://github.com/crutchcorn/causeeffect/tree/main/examples/foldkit),
+including its
+[application View](https://github.com/crutchcorn/causeeffect/blob/main/examples/foldkit/src/app.gtsx)
+and
+[counter Submodel](https://github.com/crutchcorn/causeeffect/blob/main/examples/foldkit/src/counter.gtsx).
+The
+[VS Code extension guide](https://github.com/crutchcorn/causeeffect/blob/main/apps/vsc-extension/README.md)
+explains how to enable hover types, completion, diagnostics, and navigation for
+your `.gtsx` files.
