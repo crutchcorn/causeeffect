@@ -1,6 +1,17 @@
-# CauseEffect
+<div align="center">
+<h1>CauseEffect</h1>
 
-JSX for [Effect](https://effect.website), with generator types preserved.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/logo-dark.svg" />
+  <source media="(prefers-color-scheme: light)" srcset="./assets/logo-light.svg" />
+  <img alt="CauseEffect logo" src="./assets/logo-light.svg" width="128" height="128" />
+</picture>
+
+<p>JSX for <a href="https://effect.website">Effect</a>, with generator types preserved.</p>
+
+</div>
+
+<hr />
 
 CauseEffect keeps a generator's yielded values, return value, and next-value
 parameter intact when you use it through JSX. The error and service types carried
