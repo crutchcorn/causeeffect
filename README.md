@@ -138,18 +138,53 @@ setup and Submodels. To use the same setup in another application, start with it
 [Vite configuration](examples/foldkit/vite.config.mts), and write your Views in
 `.gtsx` files.
 
-## VS Code
+## VS Code extension
 
-Build and install the GTSX extension from this repository:
+The **GTSX** extension adds TypeScript editor support for `.gtsx` files: syntax
+highlighting, hover types, completion, inline errors, go to definition,
+references, and rename. Hover over `element` in the generator example above to see
+its preserved yield, return, and next types.
 
-```sh
-pnpm --filter causeeffect-gtsx package
-code --install-extension apps/vsc-extension/dist/gtsx.vsix
-```
+### Install and enable
 
-Install TypeScript Native Preview and TypeScript 7 Nightly, trust the workspace,
-and run **GTSX: Enable TypeScript Native Language Support** from the Command
-Palette. The extension declares both TypeScript extensions as dependencies and
-uses each project's `contentMappers` settings, so the Foldkit example gets its
-classic JSX factory while generator projects preserve their generator types.
-See the [extension setup](apps/vsc-extension/README.md) for requirements and options.
+1. Use **VS Code 1.126 or later** and install and enable
+   [TypeScript Native Preview](https://marketplace.visualstudio.com/items?itemName=TypeScriptTeam.native-preview)
+   and
+   [TypeScript 7 Nightly](https://marketplace.visualstudio.com/items?itemName=TypeScriptTeam.vscode-typescript-nightly).
+   Nightly supplies the TypeScript **7.1** compiler needed for `.gtsx` support.
+2. Build and install GTSX from the repository root, after `pnpm install`:
+
+   ```sh
+   pnpm --filter causeeffect-gtsx package
+   code --install-extension apps/vsc-extension/dist/gtsx.vsix
+   ```
+
+   You can also use **Extensions: Install from VSIX…** in the Command Palette
+   and select `apps/vsc-extension/dist/gtsx.vsix`, including in VS Code Insiders.
+
+3. Open your project folder and trust the workspace. Run
+   **GTSX: Enable TypeScript Native Language Support** from the Command Palette.
+   This enables native TypeScript and content mappers for the workspace and
+   restarts the language service to pick up Nightly.
+4. Open a `.gtsx` file. The editor's language mode should say **GTSX**. Hover over
+   functions and variables to inspect their types, use completion while writing
+   JSX, and use the usual TypeScript navigation and rename actions.
+
+### Use it in your project
+
+The [Foldkit example](examples/foldkit/README.md) is already configured; open
+[counter.gtsx](examples/foldkit/src/counter.gtsx) to try the editor support. For
+another project, follow the
+[generator JSX setup](packages/jsx-content-mapper/README.md#setup) or use the
+[Foldkit TypeScript configuration](examples/foldkit/tsconfig.json). The extension
+uses your project's mapper settings, including Foldkit's classic JSX factory.
+For loose `.gtsx` files, it supplies a bundled mapper when needed.
+
+After installing or rebuilding a project's mapper, run **GTSX: Refresh Language
+Support**. If hover or completion is missing, make sure both TypeScript extensions
+are enabled and run the GTSX enable command again. The **GTSX** and **TypeScript 7**
+output channels show startup details. An explicitly selected TypeScript SDK must
+also be **7.1 or later**.
+
+See the [extension guide](apps/vsc-extension/README.md) for loose-file options and
+more troubleshooting help.
