@@ -3,6 +3,8 @@ import { isTypeScriptNativeApi } from './api.js';
 import { resolveContentMapper } from './mapper.js';
 
 const nativeExtensionId = 'TypeScriptTeam.native-preview';
+const nightlyExtensionId = 'TypeScriptTeam.vscode-typescript-nightly';
+const nativeRestartCommand = 'typescript.native-preview.restart';
 let disposeActivation: (() => void) | undefined;
 
 export async function activate(
@@ -13,6 +15,7 @@ export async function activate(
   let registration: vscode.Disposable | undefined;
   let disposed = false;
   let warned = false;
+  let warnedCompiler = false;
   let pending = Promise.resolve();
   const dispose = () => {
     disposed = true;
@@ -42,6 +45,41 @@ export async function activate(
       }
       return;
     }
+    const configuredSdk = vscode.workspace
+      .getConfiguration('js/ts')
+      .get<unknown>('tsdk.path');
+    if (typeof configuredSdk === 'string' && configuredSdk.length) {
+      output.appendLine(`Configured TypeScript SDK: ${configuredSdk}`);
+    }
+    const manifest = extension?.packageJSON as
+      { bundledTypeScriptVersion?: unknown } | undefined;
+    const bundledVersion = manifest?.bundledTypeScriptVersion;
+    const version =
+      typeof bundledVersion === 'string'
+        ? /^(\d+)\.(\d+)/.exec(bundledVersion)
+        : null;
+    const hasSdkOverride = [
+      configuredSdk,
+      vscode.workspace.getConfiguration('typescript').get<unknown>('tsdk'),
+      vscode.workspace
+        .getConfiguration('typescript.native-preview')
+        .get<unknown>('tsdk'),
+    ].some((value) => typeof value === 'string' && value.length > 0);
+    if (
+      !warnedCompiler &&
+      !hasSdkOverride &&
+      !vscode.extensions.getExtension(nightlyExtensionId) &&
+      version &&
+      (Number(version[1]) < 7 ||
+        (Number(version[1]) === 7 && Number(version[2]) < 1))
+    ) {
+      warnedCompiler = true;
+      const message =
+        `TypeScript Native Preview bundles TypeScript ${bundledVersion}, but GTSX requires TypeScript 7.1 or later. ` +
+        'Install the TypeScript 7 Nightly extension, then run GTSX: Enable TypeScript Native Language Support.';
+      output.appendLine(message);
+      void vscode.window.showWarningMessage(message);
+    }
     const mapper = await resolveContentMapper(
       vscode.workspace.workspaceFolders ?? [],
       context.extensionUri,
@@ -70,7 +108,7 @@ export async function activate(
       },
     ]);
     output.appendLine(
-      `Registered .gtsx using the ${mapper.source} mapper (${mapper.manifest.version}).`,
+      `Contributed .gtsx using the ${mapper.source} mapper (${mapper.manifest.version}).`,
     );
   };
   const refresh = () => {
@@ -104,6 +142,20 @@ export async function activate(
       await configuration.update('experimental.useTsgo', true, target);
       await configuration.update('contentMappers.enabled', true, target);
       await refresh();
+      if (disposed || !vscode.workspace.isTrusted) return;
+      // Contributions persist across native server restarts. Restart explicitly
+      // even when the flags were already enabled, so a newly installed nightly
+      // replaces Native Preview's older bundled compiler.
+      const commands = await vscode.commands.getCommands(true);
+      if (
+        !disposed &&
+        vscode.workspace.isTrusted &&
+        commands.includes(nativeRestartCommand)
+      ) {
+        await vscode.commands.executeCommand(nativeRestartCommand);
+      }
+      // A disabled provider has not registered its restart command yet. The
+      // setting change starts it with the contribution already queued above.
     }),
   );
   await refresh();

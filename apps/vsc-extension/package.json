@@ -2,7 +2,7 @@
   "name": "causeeffect-gtsx",
   "displayName": "GTSX",
   "description": "Generator-preserving TypeScript JSX language support for .gtsx files",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "causeeffect",
   "private": true,
   "license": "MIT",
@@ -17,7 +17,8 @@
     "workspace"
   ],
   "extensionDependencies": [
-    "TypeScriptTeam.native-preview"
+    "TypeScriptTeam.native-preview",
+    "TypeScriptTeam.vscode-typescript-nightly"
   ],
   "activationEvents": [
     "onLanguage:gtsx"

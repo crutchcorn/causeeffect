@@ -102,8 +102,10 @@ pnpm --filter causeeffect-gtsx package
 
 The extension's native LSP tests cover generator projects and the configured
 Foldkit example, including its classic JSX options. The host smoke test requires
-a local VS Code installation and TypeScript Native Preview; it uses temporary
-settings and workspace directories. Package the VSIX after tests because test
+a local VS Code installation, TypeScript Native Preview, and TypeScript 7 Nightly;
+it uses the installed Nightly compiler without an SDK override and invokes the
+actual Enable command in temporary settings and workspace directories.
+Package the VSIX after tests because test
 setup rebuilds the extension's `dist` directory.
 
 When incremental commits are requested, commit coherent completed changes as

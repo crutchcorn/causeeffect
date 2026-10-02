@@ -147,8 +147,9 @@ pnpm --filter causeeffect-gtsx package
 code --install-extension apps/vsc-extension/dist/gtsx.vsix
 ```
 
-Install TypeScript Native Preview, trust the workspace, and run **GTSX: Enable
-TypeScript Native Language Support** from the Command Palette. The extension
+Install TypeScript Native Preview and TypeScript 7 Nightly, trust the workspace,
+and run **GTSX: Enable TypeScript Native Language Support** from the Command
+Palette. The extension declares both TypeScript extensions as dependencies and
 uses each project's `contentMappers` settings, so the Foldkit example gets its
 classic JSX factory while generator projects preserve their generator types.
 See the [extension setup](apps/vsc-extension/README.md) for requirements and options.

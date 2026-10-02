@@ -70,11 +70,45 @@ exports.run = async function run() {
     const api = await native.activate();
     assert.equal(typeof api.registerContentMappers, 'function');
     result.nativeExtensionVersion = native.packageJSON.version;
+    result.bundledCompilerVersion = native.packageJSON.bundledTypeScriptVersion;
+    result.sdkPath = vscode.workspace
+      .getConfiguration('js/ts')
+      .get('tsdk.path');
+    const nightly = vscode.extensions.getExtension(
+      'TypeScriptTeam.vscode-typescript-nightly',
+    );
+    assert.ok(
+      nightly,
+      'The isolated profile must load the official TypeScript Nightly compiler contribution.',
+    );
+    result.nightlyExtensionVersion = nightly.packageJSON.version;
+    if (process.env.GTSX_HOST_COMPILER_MODE === 'provider') {
+      assert.ok(
+        !result.sdkPath,
+        'The default host test must not override the SDK path.',
+      );
+    }
 
     const uri = vscode.Uri.file(join(workspace, 'main.gtsx'));
     const document = await vscode.workspace.openTextDocument(uri);
     assert.equal(document.languageId, 'gtsx');
     await vscode.window.showTextDocument(document);
+    if (process.env.GTSX_HOST_ENABLE_COMMAND === '1') {
+      const configuration = vscode.workspace.getConfiguration('js/ts');
+      result.nativeEnabledBeforeCommand = configuration.get(
+        'experimental.useTsgo',
+      );
+      await vscode.commands.executeCommand('gtsx.enableLanguageSupport');
+      assert.equal(configuration.get('experimental.useTsgo'), true);
+      assert.equal(configuration.get('contentMappers.enabled'), true);
+      if (process.env.GTSX_HOST_COMPILER_MODE === 'provider') {
+        assert.ok(
+          !configuration.get('tsdk.path'),
+          'The Enable command must use the contributed Nightly without setting an SDK override.',
+        );
+      }
+      result.enabledByCommand = true;
+    }
     const expectedType =
       'JSX.GeneratorElement<number, JSX.GeneratorElement<never, never, never>, unknown>';
     let latestHover = '';

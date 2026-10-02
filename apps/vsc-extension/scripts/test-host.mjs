@@ -1,8 +1,12 @@
 /**
  * Runs the smoke test in a real VS Code extension host with isolated settings.
  * Overrides: CODE_BINARY (the Code CLI), NATIVE_EXTENSION_PATH (an installed
- * TypeScriptTeam.native-preview directory), HOST_TEST_TIMEOUT_MS, and
+ * TypeScriptTeam.native-preview directory), NIGHTLY_EXTENSION_PATH (an installed
+ * TypeScriptTeam.vscode-typescript-nightly directory), HOST_TEST_TIMEOUT_MS, and
  * KEEP_HOST_TEST_ARTIFACTS=1 (preserve the temporary profile and logs).
+ * Defaults use the installed extensions without an SDK override and invoke the
+ * Enable command. HOST_TEST_COMPILER=nightly selects the workspace's pinned SDK
+ * for diagnosis. HOST_TEST_ENABLE_COMMAND=0 uses preset native flags instead.
  */
 import { execFileSync, spawn } from 'node:child_process';
 import {
@@ -23,28 +27,31 @@ import { fileURLToPath } from 'node:url';
 
 const extensionRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
+const compilerMode = process.env.HOST_TEST_COMPILER ?? 'provider';
+if (!['nightly', 'provider'].includes(compilerMode))
+  throw new Error('HOST_TEST_COMPILER must be nightly or provider.');
+const enableByCommand = process.env.HOST_TEST_ENABLE_COMMAND !== '0';
 const codeBinary =
   process.env.CODE_BINARY ??
   (process.platform === 'darwin'
     ? '/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code'
     : 'code');
 
-async function nativeExtensionPath() {
-  if (process.env.NATIVE_EXTENSION_PATH)
-    return resolve(process.env.NATIVE_EXTENSION_PATH);
+async function installedExtensionPath(extensionId, overrideName) {
+  if (process.env[overrideName]) return resolve(process.env[overrideName]);
   for (const directory of [
     join(homedir(), '.vscode-insiders/extensions'),
     join(homedir(), '.vscode/extensions'),
   ]) {
     const entries = await readdir(directory).catch(() => []);
     const candidates = entries
-      .filter((name) => name.startsWith('typescriptteam.native-preview-'))
+      .filter((name) => name.startsWith(`${extensionId.toLowerCase()}-`))
       .sort()
       .reverse();
     if (candidates.length) return join(directory, candidates[0]);
   }
   throw new Error(
-    'Set NATIVE_EXTENSION_PATH to an installed TypeScriptTeam.native-preview extension.',
+    `Set ${overrideName} to an installed ${extensionId} extension.`,
   );
 }
 
@@ -53,11 +60,18 @@ execFileSync(process.execPath, [join(extensionRoot, 'scripts/build.mjs')], {
   stdio: 'inherit',
 });
 await access(join(extensionRoot, 'dist/extension.cjs'));
-const nativePath = await nativeExtensionPath();
-const sdkPath = join(
-  dirname(require.resolve('typescript-next/package.json')),
-  'lib',
+const nativePath = await installedExtensionPath(
+  'TypeScriptTeam.native-preview',
+  'NATIVE_EXTENSION_PATH',
 );
+const nightlyPath = await installedExtensionPath(
+  'TypeScriptTeam.vscode-typescript-nightly',
+  'NIGHTLY_EXTENSION_PATH',
+);
+const sdkPath =
+  compilerMode === 'nightly'
+    ? join(dirname(require.resolve('typescript-next/package.json')), 'lib')
+    : undefined;
 // macOS's default TMPDIR is long enough to exceed Unix socket path limits.
 const temporary = await realpath(
   await mkdtemp(
@@ -92,14 +106,37 @@ try {
     join(extensions, `typescriptteam.native-preview-${nativeManifest.version}`),
     'dir',
   );
+  const nightlyManifest = JSON.parse(
+    await readFile(join(nightlyPath, 'package.json'), 'utf8'),
+  );
+  if (
+    nightlyManifest.publisher !== 'TypeScriptTeam' ||
+    nightlyManifest.name !== 'vscode-typescript-nightly'
+  ) {
+    throw new Error(
+      `NIGHTLY_EXTENSION_PATH is not the official TypeScript Nightly extension: ${nightlyPath}`,
+    );
+  }
+  await symlink(
+    nightlyPath,
+    join(
+      extensions,
+      `typescriptteam.vscode-typescript-nightly-${nightlyManifest.version}`,
+    ),
+    'dir',
+  );
   await writeFile(
     join(userData, 'User/settings.json'),
     JSON.stringify(
       {
-        'js/ts.experimental.useTsgo': true,
-        'js/ts.contentMappers.enabled': true,
-        'js/ts.tsdk.path': sdkPath,
-        'js/ts.trace.server': 'off',
+        ...(enableByCommand
+          ? {}
+          : {
+              'js/ts.experimental.useTsgo': true,
+              'js/ts.contentMappers.enabled': true,
+            }),
+        ...(sdkPath === undefined ? {} : { 'js/ts.tsdk.path': sdkPath }),
+        'js/ts.trace.server': 'messages',
         'security.workspace.trust.enabled': false,
         'extensions.autoCheckUpdates': false,
         'extensions.autoUpdate': false,
@@ -131,7 +168,9 @@ export const invalid = <Counter count="wrong" />;
   const timeoutMs = Number(process.env.HOST_TEST_TIMEOUT_MS ?? 90_000);
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0)
     throw new Error('HOST_TEST_TIMEOUT_MS must be a positive number.');
-  console.log(`Testing GTSX in an isolated VS Code profile (${temporary}).`);
+  console.log(
+    `Testing GTSX with the ${compilerMode} compiler${enableByCommand ? ' and Enable command' : ''} in an isolated VS Code profile (${temporary}).`,
+  );
   const child = spawn(
     codeBinary,
     [
@@ -158,6 +197,8 @@ export const invalid = <Counter count="wrong" />;
         ...process.env,
         GTSX_HOST_WORKSPACE: workspace,
         GTSX_HOST_TEST_RESULT: resultPath,
+        GTSX_HOST_ENABLE_COMMAND: enableByCommand ? '1' : '0',
+        GTSX_HOST_COMPILER_MODE: compilerMode,
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     },

@@ -25,9 +25,13 @@ mapper and Effect examples.
 
 Requires **VS Code 1.126 or later** and the
 [TypeScript Native Preview extension](https://marketplace.visualstudio.com/items?itemName=TypeScriptTeam.native-preview)
-(`TypeScriptTeam.native-preview`). Its current content mapper API is experimental;
-this extension is verified with Native Preview **1.0.1** and TypeScript
-**7.1.0-dev.20261002.1**. Update Native Preview if GTSX reports an unsupported API.
+(`TypeScriptTeam.native-preview`) plus
+[TypeScript 7 Nightly](https://marketplace.visualstudio.com/items?itemName=TypeScriptTeam.vscode-typescript-nightly)
+(`TypeScriptTeam.vscode-typescript-nightly`). The VSIX declares both as extension
+dependencies. Native Preview **1.0.1** bundles TypeScript **7.0.2**, which does not
+support content mappers; Nightly supplies the required **7.1** compiler. The API
+is experimental, and the compiler integration tests pin **7.1.0-dev.20261002.1**.
+Update Native Preview if GTSX reports an unsupported API.
 
 From the repository root:
 
@@ -40,7 +44,7 @@ code --install-extension apps/vsc-extension/dist/gtsx.vsix
 Trust the workspace, open a `.gtsx` file, and run
 **GTSX: Enable TypeScript Native Language Support** from the Command Palette.
 The command enables these settings in the current workspace, or in user settings
-when no workspace is open:
+when no workspace is open, then restarts Native Preview so it picks up Nightly:
 
 ```json
 {
@@ -53,6 +57,15 @@ Activation itself leaves settings unchanged. Untrusted workspaces get syntax
 highlighting; starting mapper processes requires workspace trust and enabled
 content mappers. Virtual workspaces are unsupported. The **GTSX** output channel
 reports the selected mapper and startup failures.
+
+If hover and other language actions are missing, check the **TypeScript 7** output
+channel. An `unknown method 'custom/setContentMapperContributions'` error means
+the selected compiler is too old. Install TypeScript 7 Nightly and run the GTSX
+enable command again. Explicit `js/ts.tsdk.path` settings and selected workspace
+SDKs take precedence over Nightly; they must also point to TypeScript **7.1 or
+later**. Use **TypeScript: Select TypeScript Version** from a `.ts` file to select
+**Use TypeScript 7**, or configure the project's 7.1 SDK. The GTSX extension keeps
+explicit SDK settings intact.
 
 ## Projects and loose files
 
@@ -132,16 +145,20 @@ both configured and inferred projects.
 They also check the Foldkit example's classic factory while a generator fallback
 is registered, including mapped diagnostics after an edit and its restoration.
 
-For a real VS Code extension host smoke test, install Native Preview locally and
-run:
+For a real VS Code extension host smoke test, install Native Preview and
+TypeScript 7 Nightly locally and run:
 
 ```sh
 CODE_BINARY=code \
 NATIVE_EXTENSION_PATH=/path/to/typescriptteam.native-preview-extension \
+NIGHTLY_EXTENSION_PATH=/path/to/typescriptteam.vscode-typescript-nightly-extension \
 pnpm --filter causeeffect-gtsx test:host
 ```
 
 The host test uses temporary settings, extensions, and workspace directories.
+Its default run invokes the actual Enable command and checks the compiler from
+the installed Nightly extension, without a `js/ts.tsdk.path` override. Set
+`HOST_TEST_COMPILER=nightly` to test the pinned SDK separately.
 
 ## Integration
 

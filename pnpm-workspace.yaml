@@ -1,4 +1,6 @@
 allowBuilds:
+  '@vscode/vsce-sign': true
+  esbuild: true
   nx: true
 packages:
   - apps/*

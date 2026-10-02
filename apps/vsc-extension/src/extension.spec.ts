@@ -37,6 +37,17 @@ const host = vi.hoisted(() => {
     isActive: true,
     exports: nativeApi as unknown,
     activate: vi.fn(async (): Promise<unknown> => nativeExtension.exports),
+    packageJSON: { bundledTypeScriptVersion: '7.0.2' },
+  };
+  const nightlyExtension = {
+    id: 'TypeScriptTeam.vscode-typescript-nightly',
+    isActive: true,
+    exports: undefined as unknown,
+    activate: vi.fn(async (): Promise<unknown> => undefined),
+    packageJSON: {
+      version: '0.20261002.1',
+      bundledTypeScriptVersion: '7.1.0-dev.20261002.1',
+    },
   };
   const settings = new Map<string, unknown>();
   const update = vi.fn<
@@ -63,9 +74,18 @@ const host = vi.hoisted(() => {
     output,
     registrationDisposals,
     nativeExtension,
+    nightlyExtension,
     nativeApi,
     registerContentMappers,
-    getExtension: vi.fn(() => nativeExtension),
+    getExtension:
+      vi.fn<
+        (
+          id: string,
+        ) => typeof nativeExtension | typeof nightlyExtension | undefined
+      >(),
+    getCommands: vi
+      .fn<(...args: unknown[]) => Promise<string[]>>()
+      .mockResolvedValue(['typescript.native-preview.restart']),
     registerCommand: vi.fn(
       (name: string, callback: (...args: unknown[]) => unknown) => {
         commands.set(name, callback);
@@ -130,6 +150,7 @@ vi.mock('vscode', () => ({
   commands: {
     registerCommand: host.registerCommand,
     executeCommand: host.executeCommand,
+    getCommands: host.getCommands,
   },
   window: {
     createOutputChannel: vi.fn(() => host.output),
@@ -175,7 +196,13 @@ beforeEach(() => {
   host.isTrusted = true;
   host.folders = [{ name: 'project', index: 0, uri: host.uri('/project') }];
   host.nativeExtension.exports = host.nativeApi;
-  host.getExtension.mockReturnValue(host.nativeExtension);
+  host.getExtension.mockImplementation((id) =>
+    id === 'TypeScriptTeam.native-preview'
+      ? host.nativeExtension
+      : id === 'TypeScriptTeam.vscode-typescript-nightly'
+        ? host.nightlyExtension
+        : undefined,
+  );
   host.resolveContentMapper.mockReturnValue(host.resolved);
   for (const event of [
     host.configurationChanged,
@@ -400,6 +427,55 @@ describe('GTSX extension activation', () => {
     expect(host.update).not.toHaveBeenCalled();
     expect(host.nativeExtension.activate).not.toHaveBeenCalled();
     expect(host.showWarningMessage).toHaveBeenCalled();
+  });
+
+  it('restarts Native Preview after Enable even when the native settings are already true', async () => {
+    await activate();
+    expect(host.executeCommand).not.toHaveBeenCalled();
+    await host.commands.get('gtsx.enableLanguageSupport')?.();
+    expect(host.executeCommand).toHaveBeenCalledWith(
+      'typescript.native-preview.restart',
+    );
+  });
+
+  it('does not call an unavailable restart command when Native Preview has not started', async () => {
+    host.settings.set('js/ts.experimental.useTsgo', false);
+    host.getCommands.mockResolvedValueOnce([]);
+    await activate();
+    await expect(
+      host.commands.get('gtsx.enableLanguageSupport')?.(),
+    ).resolves.toBeUndefined();
+    expect(host.executeCommand).not.toHaveBeenCalled();
+    expect(host.settings.get('js/ts.experimental.useTsgo')).toBe(true);
+  });
+
+  it('warns once when an older bundled compiler has no Nightly contribution or SDK override', async () => {
+    host.getExtension.mockImplementation((id) =>
+      id === 'TypeScriptTeam.native-preview' ? host.nativeExtension : undefined,
+    );
+    await activate();
+    await host.commands.get('gtsx.restartLanguageSupport')?.();
+    expect(host.showWarningMessage).toHaveBeenCalledTimes(1);
+    expect(host.showWarningMessage).toHaveBeenCalledWith(
+      expect.stringContaining('TypeScript 7.1 or later'),
+    );
+    expect(host.output.appendLine).toHaveBeenCalledWith(
+      expect.stringContaining('TypeScript 7.0.2'),
+    );
+    expect(host.update).not.toHaveBeenCalled();
+  });
+
+  it('honors an existing SDK override when the Nightly contribution is absent', async () => {
+    host.getExtension.mockImplementation((id) =>
+      id === 'TypeScriptTeam.native-preview' ? host.nativeExtension : undefined,
+    );
+    host.settings.set('js/ts.tsdk.path', '/custom/typescript/lib');
+    await activate();
+    expect(host.showWarningMessage).not.toHaveBeenCalled();
+    expect(host.output.appendLine).toHaveBeenCalledWith(
+      'Configured TypeScript SDK: /custom/typescript/lib',
+    );
+    expect(host.update).not.toHaveBeenCalled();
   });
 
   it('reports mapper failures and allows the refresh command to recover', async () => {
