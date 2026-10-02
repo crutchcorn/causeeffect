@@ -35,40 +35,20 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
     const jsx = createJsx(h);
 
     return (
-      <section
-        attributes={[h.Class('counter'), h.Role('region'), h.AriaLabel(label)]}
-      >
-        <p attributes={[h.Class('eyebrow')]}>Independent submodel</p>
+      <section Class="counter" Role="region" AriaLabel={label}>
+        <p Class="eyebrow">Independent submodel</p>
         <h2>{label}</h2>
-        <p
-          attributes={[
-            h.Class('count'),
-            h.Role('status'),
-            h.AriaLive('polite'),
-          ]}
-        >
+        <p Class="count" Role="status" AriaLive="polite">
           {model.count}
         </p>
-        <div attributes={[h.Class('controls')]}>
-          <button
-            attributes={[
-              h.OnClick(Message.ClickedDecrement()),
-              h.AriaLabel('Decrement'),
-            ]}
-          >
+        <div Class="controls">
+          <button OnClick={Message.ClickedDecrement()} AriaLabel="Decrement">
             −
           </button>
-          <button
-            attributes={[h.OnClick(Message.ClickedReset()), h.Class('reset')]}
-          >
+          <button OnClick={Message.ClickedReset()} Class="reset">
             Reset
           </button>
-          <button
-            attributes={[
-              h.OnClick(Message.ClickedIncrement()),
-              h.AriaLabel('Increment'),
-            ]}
-          >
+          <button OnClick={Message.ClickedIncrement()} AriaLabel="Increment">
             +
           </button>
         </div>

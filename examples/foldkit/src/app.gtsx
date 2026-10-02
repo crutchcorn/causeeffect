@@ -60,17 +60,17 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   return {
     title: `Foldkit + gtsx · Total ${total}`,
     body: (
-      <main attributes={[h.Class('app')]}>
+      <main Class="app">
         <header>
-          <p attributes={[h.Class('eyebrow')]}>Foldkit × gtsx</p>
+          <p Class="eyebrow">Foldkit × gtsx</p>
           <h1>One view. Two independent counters.</h1>
-          <p attributes={[h.Class('intro')]}>
+          <p Class="intro">
             Each counter owns its model, messages, and update. JSX describes the
             view; Foldkit routes the interactions.
           </p>
         </header>
 
-        <div attributes={[h.Class('counters')]}>
+        <div Class="counters">
           <jsx.Submodel
             slotId="left"
             model={model.left}
@@ -87,16 +87,16 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
           />
         </div>
 
-        <footer attributes={[h.Class('summary')]}>
-          <p attributes={[h.Class('total'), h.Id('total')]}>
+        <footer Class="summary">
+          <p Class="total" Id="total">
             Combined total <strong>{total}</strong>
           </p>
-          <button attributes={[h.OnClick(Message.ClickedResetAll())]}>
+          <button OnClick={Message.ClickedResetAll()}>
             Reset both counters
           </button>
         </footer>
 
-        <aside attributes={[h.Class('note')]}>
+        <aside Class="note">
           Explore either counter, then reset both. Each keeps its own state.
         </aside>
       </main>

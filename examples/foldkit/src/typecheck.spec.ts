@@ -21,7 +21,10 @@ const jsx = createJsx(h);
 const childMessage: ChildMessage = { _tag: 'Child' };
 const wrap = (_message: ChildMessage): ParentMessage => ({ _tag: 'Parent', value: 1 });
 const childView = Submodel.defineView<ChildModel, ChildMessage, { label: string }>(
-  (model, inputs, childH) => childH.p([], [inputs.label, String(model.count)]),
+  (model, inputs, childH) => {
+    const childJsx = createJsx(childH);
+    return childJsx.createElement('button', { OnClick: childMessage }, inputs.label, model.count);
+  },
 );
 `;
 
@@ -120,18 +123,64 @@ describe('native TypeScript 7.1 Foldkit JSX diagnostics', () => {
     const source =
       fixturePrelude +
       `
-export const valid = <button attributes={[h.OnClick(wrap(childMessage))]}>Parent event</button>;
-export const invalidEvent = <button attributes={[h.OnClick(childMessage)]}>Child event</button>;
+export const valid = <button OnClick={wrap(childMessage)}>Parent event</button>;
+export const invalidEvent = <button OnClick={childMessage}>Child event</button>;
 `;
     const result = await compile(source);
     expect(result.status).not.toBe(0);
     expectDiagnostic(result.output, source, 'invalidEvent');
-    expect(result.output).toContain('error TS2741:');
-    expect(result.output).toContain(
-      "Property 'value' is missing in type 'ChildMessage' but required in type 'ParentMessage'",
-    );
+    expect(result.output).toContain('error TS2769:');
     expect(result.output).not.toContain('.gtsx.ts');
     expect(result.output).not.toContain('error TS2307:');
+  }, 30_000);
+
+  it('contextually types direct input callbacks and rejects invalid attributes', async () => {
+    const source =
+      fixturePrelude +
+      `
+export const validInput = <input Value="Draft" Checked={true} Class="field" AriaLabel="Draft" attributes={[h.DataAttribute('state', 'edited')]} OnInput={(value) => {
+  const text: string = value;
+  // @ts-expect-error The contextual parameter is string, not any.
+  const number: number = value;
+  return { _tag: 'Parent', value: text.length };
+}} />;
+export const validOmitted = <input Class={undefined} Value={undefined} Checked={false} />;
+export const wrongMessage = <input OnInput={(value) => ({ _tag: 'Child' })} />;
+export const wrongParameter = <input OnInput={(value: number) => ({ _tag: 'Parent', value })} />;
+export const wrongClick = <button OnClick={() => ({ _tag: 'Parent', value: 1 })} />;
+export const wrongClass = <div Class={123} />;
+export const wrongChecked = <input Checked="yes" />;
+export const wrongTextarea = <textarea InnerHTML="Draft" />;
+export const wrongCasing = <button onClick={wrap(childMessage)} />;
+`;
+    const result = await compile(source);
+    expect(result.status).not.toBe(0);
+    for (const marker of [
+      'wrongMessage',
+      'wrongParameter',
+      'wrongClick',
+      'wrongClass',
+      'wrongChecked',
+      'wrongTextarea',
+      'wrongCasing',
+    ]) {
+      expectDiagnostic(result.output, source, marker);
+    }
+    expect(result.output).not.toContain(
+      "Parameter 'value' implicitly has an 'any' type",
+    );
+    expect(result.output).not.toContain('error TS2578:');
+    expect(result.output).not.toContain('.gtsx.ts');
+    expect(result.output).not.toContain('error TS2307:');
+    for (const [index, line] of source.split('\n').entries()) {
+      if (
+        line.includes('validInput') ||
+        line.includes('validOmitted') ||
+        line.includes('const text: string')
+      ) {
+        expect(result.output).not.toContain(`main.gtsx(${index + 1},`);
+      }
+    }
   }, 30_000);
 
   it('checks branded Submodel views, models, inputs, and parent message wrappers', async () => {
