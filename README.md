@@ -60,33 +60,48 @@ and handles updates; its Views remain ordinary synchronous functions.
 
 ## Generator types before and after
 
-For generator components, the [generator JSX setup](packages/jsx-content-mapper/README.md#setup)
-preserves the types you get from a direct call when you use JSX:
+Before, ordinary JSX gives the expression the runtime's `JSX.Element` type,
+even when the component is a generator. This assumes a JSX runtime that accepts
+generator components:
+
+```tsx
+// greeting.tsx
+function* Greeting() {
+  yield 123;
+  return <p>Hello</p>;
+}
+
+const element = <Greeting />;
+// JSX.Element
+```
+
+The direct call `Greeting()` still has the inferred type
+`Generator<number, JSX.Element, unknown>`, but `<Greeting />` loses those generator
+parameters.
+
+After, the same component in a `.gtsx` file with the
+[generator JSX setup](packages/jsx-content-mapper/README.md#setup) keeps its inferred
+types without a return-type annotation:
 
 ```tsx
 // greeting.gtsx
-import type { JSX } from '@causeeffect/jsx-content-mapper/runtime';
-
-type ViewElement = JSX.GeneratorElement<never, never, never>;
-
-function* Greeting(): Generator<number, ViewElement, string> {
-  const name = yield 123;
-  return <p>Hello, {name}!</p>;
+function* Greeting() {
+  yield 123;
+  return <p>Hello</p>;
 }
 
-// Before: calling the generator directly.
-const iterator = Greeting();
-// Generator<number, ViewElement, string>
-
-// After: using JSX with the content mapper.
 const element = <Greeting />;
-// JSX.GeneratorElement<number, ViewElement, string>
+// JSX.GeneratorElement<
+//   number,
+//   JSX.GeneratorElement<never, never, never>,
+//   unknown
+// >
 ```
 
-The yielded value is still a `number`, the return value is still a `ViewElement`,
-and the value sent back into the generator is still a `string`. Wrapping the
-component in JSX keeps all three types available to TypeScript. This generator
-example is separate from Foldkit's synchronous Views above.
+The yielded value is a `number`, and the JSX return is inferred as
+`JSX.GeneratorElement<never, never, never>`. TypeScript infers `unknown` for the
+next-value type, which the mapper also keeps. All three remain available through
+JSX. This generator example is separate from Foldkit's synchronous Views above.
 
 ## Install and run
 
