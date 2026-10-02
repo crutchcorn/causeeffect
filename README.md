@@ -16,6 +16,11 @@ its typed models and messages.
 Before, a Hello world View uses Foldkit's HTML helpers:
 
 ```ts
+import type { Document, HtmlBuilder } from 'foldkit/html';
+
+type Model = { readonly name: string };
+type Message = { readonly _tag: 'ClickedHello' };
+
 export function view(model: Model, h: HtmlBuilder<Message>): Document {
   return {
     title: 'Hello world',
