@@ -23,12 +23,37 @@ type ChildlessTag = {
     : never;
 }[TagName];
 
-/** Use Foldkit's attribute constructors so the view's Message type stays intact. */
-export type IntrinsicProps<Message, Tag extends TagName> = Readonly<{
-  attributes?: Parameters<HtmlBuilder<Message>[Tag]>[0];
-  key?: PropertyKey;
-  children?: Tag extends ChildlessTag ? never : JsxChild;
-}>;
+type AttributeConstructor = Exclude<
+  Extract<Attribute<never>['_tag'], keyof HtmlBuilder<never>>,
+  'Attribute' | 'DataAttribute' | 'OnCutText'
+>;
+
+type AttributeValue<
+  Message,
+  Name extends AttributeConstructor,
+> = Name extends 'AllowDrop'
+  ? boolean
+  : Parameters<HtmlBuilder<Message>[Name]>[0];
+
+/** Direct props reuse the exact types of the current builder's attribute helpers. */
+export type AttributeProps<Message> = {
+  readonly [Name in AttributeConstructor]?:
+    AttributeValue<Message, Name> | undefined;
+};
+
+export type IntrinsicProps<
+  Message,
+  Tag extends TagName,
+> = AttributeProps<Message> &
+  Readonly<{
+    attributes?: Parameters<HtmlBuilder<Message>[Tag]>[0];
+    key?: PropertyKey;
+    children?: Tag extends ChildlessTag ? never : JsxChild;
+  }> & {
+    readonly InnerHTML?: Tag extends 'textarea'
+      ? never
+      : AttributeValue<Message, 'InnerHTML'> | undefined;
+  };
 
 type AnySubmodelView = Parameters<HtmlBuilder<never>['submodel']>[0]['view'];
 const submodelComponent = Symbol('Foldkit JSX Submodel');
@@ -184,18 +209,38 @@ export function createJsx<Message>(
       throw new TypeError(`Unsupported Foldkit JSX element: ${String(tag)}`);
     }
 
-    for (const name of Object.keys(props)) {
-      if (name !== 'attributes' && name !== 'key' && name !== 'children') {
+    const name = tag as TagName;
+    const attributes = [
+      ...((props['attributes'] ?? []) as ReadonlyArray<
+        Attribute<Message> | ChildAttribute
+      >),
+    ];
+    for (const [prop, value] of Object.entries(props)) {
+      if (prop === 'attributes' || prop === 'key' || prop === 'children')
+        continue;
+      if (
+        !/^[A-Z]/.test(prop) ||
+        !Object.hasOwn(h, prop) ||
+        typeof h[prop as AttributeConstructor] !== 'function' ||
+        ['Attribute', 'DataAttribute', 'OnCutText'].includes(prop)
+      ) {
+        throw new TypeError(`Unsupported Foldkit JSX attribute: ${prop}`);
+      }
+      if (value === undefined) continue;
+      if (name === 'textarea' && prop === 'InnerHTML') {
         throw new TypeError(
-          `Foldkit JSX elements accept attributes, key and children; received ${name}`,
+          'Foldkit textarea content must use Value, not InnerHTML',
         );
       }
+      const makeAttribute = h[prop as AttributeConstructor] as (
+        value?: unknown,
+      ) => Attribute<Message>;
+      if (prop === 'AllowDrop') {
+        if (value) attributes.push(makeAttribute());
+      } else {
+        attributes.push(makeAttribute(value));
+      }
     }
-
-    const name = tag as TagName;
-    const attributes = (props['attributes'] ?? []) as ReadonlyArray<
-      Attribute<Message> | ChildAttribute
-    >;
     const normalized = normalizeChildren(effectiveChildren);
     const childless = childlessTags.has(name);
     if (childless && normalized.length > 0) {

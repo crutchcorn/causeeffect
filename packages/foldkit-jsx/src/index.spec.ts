@@ -5,6 +5,23 @@ import { Scene } from 'foldkit/test';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { createJsx } from './index.js';
 
+function expectSameElement(actual: Html, expected: Html): void {
+  if (actual === null || expected === null) {
+    expect(actual).toEqual(expected);
+    return;
+  }
+  // Value/Checked create a new live-DOM hook for each builder invocation.
+  const { hook: actualHooks, ...actualData } = actual.data ?? {};
+  const { hook: expectedHooks, ...expectedData } = expected.data ?? {};
+  expect({ ...actual, data: actualData }).toEqual({
+    ...expected,
+    data: expectedData,
+  });
+  expect(Object.keys(actualHooks ?? {})).toEqual(
+    Object.keys(expectedHooks ?? {}),
+  );
+}
+
 describe('Foldkit JSX', () => {
   it('uses the builder for intrinsic elements, attributes and keys', () => {
     const jsx = createJsx(inertHtml);
@@ -15,6 +32,85 @@ describe('Foldkit JSX', () => {
     expect(
       jsx.createElement('li', { key: 'item', attributes }, 'Item'),
     ).toEqual(inertHtml.keyed('li')('item', attributes, ['Item']));
+  });
+
+  it('converts direct HTML props into Foldkit attributes', () => {
+    const jsx = createJsx(inertHtml);
+    expectSameElement(
+      jsx.createElement('input', {
+        attributes: [inertHtml.DataAttribute('state', 'edited')],
+        Id: 'draft',
+        Class: 'field',
+        Value: 'Draft',
+        Checked: true,
+        AriaLabel: 'Draft label',
+        Style: { color: 'red', 'font-weight': 'bold' },
+      }),
+      inertHtml.input([
+        inertHtml.DataAttribute('state', 'edited'),
+        inertHtml.Id('draft'),
+        inertHtml.Class('field'),
+        inertHtml.Value('Draft'),
+        inertHtml.Checked(true),
+        inertHtml.AriaLabel('Draft label'),
+        inertHtml.Style({ color: 'red', 'font-weight': 'bold' }),
+      ]),
+    );
+    expectSameElement(
+      jsx.createElement('textarea', { Value: 'Draft' }),
+      inertHtml.textarea([inertHtml.Value('Draft')]),
+    );
+  });
+
+  it('combines direct props with the attribute escape hatch and keys', () => {
+    const jsx = createJsx(inertHtml);
+    expect(
+      jsx.createElement(
+        'li',
+        {
+          key: 'item',
+          attributes: [inertHtml.Title('More information')],
+          Class: 'item',
+        },
+        'Item',
+      ),
+    ).toEqual(
+      inertHtml.keyed('li')(
+        'item',
+        [inertHtml.Title('More information'), inertHtml.Class('item')],
+        ['Item'],
+      ),
+    );
+    expect(
+      jsx.createElement('div', {
+        attributes: [inertHtml.Class('original')],
+        Class: 'replacement',
+      }),
+    ).toEqual(
+      inertHtml.div([
+        inertHtml.Class('original'),
+        inertHtml.Class('replacement'),
+      ]),
+    );
+    expect(
+      jsx.createElement('li', { Key: 'item', Class: 'item' }, 'Item'),
+    ).toEqual(
+      inertHtml.li([inertHtml.Key('item'), inertHtml.Class('item')], ['Item']),
+    );
+  });
+
+  it('omits undefined attributes while retaining false boolean values', () => {
+    const jsx = createJsx(inertHtml);
+    expectSameElement(
+      jsx.createElement('input', {
+        Class: undefined,
+        Value: undefined,
+        Title: undefined,
+        Checked: false,
+        Disabled: false,
+      }),
+      inertHtml.input([inertHtml.Checked(false), inertHtml.Disabled(false)]),
+    );
   });
 
   it('flattens fragments and arrays, renders numbers and drops empty conditions', () => {
@@ -72,9 +168,13 @@ describe('Foldkit JSX', () => {
     expect(() => unchecked('input', null, 'Child')).toThrow(
       'cannot have JSX children',
     );
-    expect(() => unchecked('button', { onClick: () => undefined })).toThrow(
-      'attributes',
+    expect(() => unchecked('textarea', { InnerHTML: 'Draft' })).toThrow(
+      'textarea',
     );
+    expect(() => unchecked('button', { unsupported: 'value' })).toThrow(
+      'Unsupported',
+    );
+    expect(() => unchecked('button', { onClick: {} })).toThrow('Unsupported');
     expect(() => unchecked('unknown', null)).toThrow('Unsupported');
     expect(() => unchecked('submodel', null)).toThrow('Unsupported');
     expect(() => unchecked('Class', null)).toThrow('Unsupported');
@@ -92,7 +192,7 @@ describe('Foldkit JSX', () => {
       const jsx = createJsx(h);
       return jsx.createElement(
         'button',
-        { attributes: [h.OnClick({ _tag: 'Increment' })] },
+        { OnClick: { _tag: 'Increment' } },
         `${inputs.label}: ${model.count}`,
       );
     });
@@ -118,6 +218,28 @@ describe('Foldkit JSX', () => {
       Scene.expect(Scene.role('button')).toHaveText('Counter: 0'),
       Scene.click(Scene.role('button')),
       Scene.expect(Scene.role('button')).toHaveText('Counter: 1'),
+    );
+  });
+
+  it('passes input values to direct message callbacks', () => {
+    type Message = { _tag: 'Input'; value: string };
+    Scene.scene(
+      {
+        update: (_model: { value: string }, message: Message) => ({
+          model: { value: message.value },
+        }),
+        view: (model, h) => {
+          const jsx = createJsx(h);
+          return jsx.createElement('input', {
+            AriaLabel: 'Draft',
+            Value: model.value,
+            OnInput: (value) => ({ _tag: 'Input', value }),
+          });
+        },
+      },
+      Scene.given({ value: '' }),
+      Scene.type(Scene.role('textbox'), 'Typed draft'),
+      Scene.expect(Scene.role('textbox')).toHaveValue('Typed draft'),
     );
   });
 });
@@ -196,10 +318,42 @@ export function checkFactoryTypes(
   jsx.createElement('textarea', { children: 'Draft' });
   // @ts-expect-error Textarea cannot own content through InnerHTML.
   jsx.createElement('textarea', { attributes: [h.InnerHTML('Draft')] });
+  // @ts-expect-error Textarea cannot own content through a direct InnerHTML prop.
+  jsx.createElement('textarea', { InnerHTML: 'Draft' });
   // @ts-expect-error Intrinsic element names come from Foldkit's TagName union.
   jsx.createElement('unknown-tag', null);
-  // @ts-expect-error HTML attributes use Foldkit constructors through attributes.
-  jsx.createElement('button', { onClick: () => undefined });
+  jsx.createElement('button', {
+    OnClick: toParentMessage({ _tag: 'Increment' }),
+  });
+  jsx.createElement('input', {
+    OnInput: (value) => {
+      expectTypeOf(value).toEqualTypeOf<string>();
+      return toParentMessage({ _tag: 'Increment' });
+    },
+  });
+  // @ts-expect-error Direct root events must produce the parent Message.
+  jsx.createElement('button', { OnClick: { _tag: 'Increment' } });
+  // @ts-expect-error Direct callback events must return the parent Message.
+  jsx.createElement('input', { OnInput: () => ({ _tag: 'Increment' }) });
+  // @ts-expect-error Input callbacks receive the DOM's string value.
+  jsx.createElement('input', {
+    OnInput: (value: number) => {
+      expectTypeOf(value).toEqualTypeOf<number>();
+      return toParentMessage({ _tag: 'Increment' });
+    },
+  });
+  // @ts-expect-error Click handlers are Message values, not callback functions.
+  jsx.createElement('button', { OnClick: () => undefined });
+  // @ts-expect-error Class accepts a string.
+  jsx.createElement('button', { Class: 123 });
+  // @ts-expect-error Checked accepts a boolean.
+  jsx.createElement('input', { Checked: 'yes' });
+  // @ts-expect-error Styles use Foldkit's string-valued style record.
+  jsx.createElement('div', { Style: { opacity: 0.5 } });
+  // @ts-expect-error Props retain Foldkit's helper casing.
+  jsx.createElement('button', {
+    onClick: toParentMessage({ _tag: 'Increment' }),
+  });
   const Label = ({ text }: { text: string }) => text;
   // @ts-expect-error Components retain their required prop types.
   jsx.createElement(Label, { text: 123 });

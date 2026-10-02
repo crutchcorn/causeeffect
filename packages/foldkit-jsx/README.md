@@ -32,20 +32,37 @@ export function view(model: Model, h: HtmlBuilder<Message>): Document {
   return {
     title: `Counter: ${model.count}`,
     body: (
-      <main attributes={[h.Class('counter')]}>
+      <main Class="counter">
         <p>{model.count}</p>
-        <button attributes={[h.OnClick({ _tag: 'ClickedIncrement' })]}>
-          Increment
-        </button>
+        <button OnClick={{ _tag: 'ClickedIncrement' }}>Increment</button>
       </main>
     ),
   };
 }
 ```
 
-Keep using Foldkit's `h.Class`, `h.OnClick`, `h.OnInput`, and other attribute constructors through the `attributes` prop. This preserves the exact Message type and supports `childAttributes` without maintaining another HTML attribute API. Direct props such as `className` and `onClick` are rejected.
+Intrinsic props use Foldkit's constructor names and parameter types directly.
+`Class="counter"` calls `h.Class('counter')`, `OnClick={message}` calls
+`h.OnClick(message)`, and `OnInput={(value) => message(value)}` calls `h.OnInput`
+with a callback whose `value` is contextually typed as `string`. Event Messages
+must belong to the current view. Names keep Foldkit's exact casing, such as
+`Id`, `Role`, `AriaLabel`, `Value`, `Checked`, and `Style`; lowercase `class` and
+`onClick` are rejected.
 
-`key` delegates to `h.keyed(tag)`. Numbers and bigints become text; nested arrays and fragments flatten; `null`, `undefined`, and booleans render nothing. A fragment is a list of children, so a root Foldkit view should return an element or `null`. Void elements accept no children. A textarea uses `attributes={[h.Value(text)]}` and rejects both children and `h.InnerHTML`.
+The adapter derives prop types from `HtmlBuilder<Message>` and discovers the
+corresponding constructors on the supplied builder. It contains no copied HTML
+attribute table or event implementation. The generic content mapper preserves
+the prop names in its classic factory calls and has no Foldkit dependency.
+
+`undefined` props are omitted; boolean attribute values including `false` are
+passed through. `AllowDrop` is a boolean switch for the zero-argument
+`h.AllowDrop()` helper. The `attributes` prop remains an escape hatch for
+`childAttributes`, required multi-argument helpers such as `h.DataAttribute`,
+`h.Attribute`, and `h.OnCutText`, and optional controls such as `h.OnClick`
+options. Its attributes are applied before direct props, using Foldkit's normal
+attribute combination behavior.
+
+`key` delegates to `h.keyed(tag)`, while `Key` uses `h.Key` directly. Numbers and bigints become text; nested arrays and fragments flatten; `null`, `undefined`, and booleans render nothing. A fragment is a list of children, so a root Foldkit view should return an element or `null`. Void elements accept no children. A textarea uses `Value={text}` and rejects both children and `InnerHTML`.
 
 Ordinary function components receive their props and a `children` array when JSX supplies children. Required props, declared child types, and the component's return type remain checked. Declare an optional `children` prop for components that render nested markup.
 
@@ -60,9 +77,7 @@ import { createJsx } from '@causeeffect/foldkit-jsx';
 export const childView = Submodel.defineView<ChildModel, ChildMessage>(
   (model, h) => {
     const jsx = createJsx(h);
-    return (
-      <button attributes={[h.OnClick(childMessage)]}>{model.count}</button>
-    );
+    return <button OnClick={childMessage}>{model.count}</button>;
   },
 );
 ```
