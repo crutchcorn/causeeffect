@@ -131,7 +131,7 @@ component you want to use:
 | Foldkit Views and Submodels with JSX                | `@causeeffect/foldkit-jsx`                      | [Install and configure Foldkit JSX](packages/foldkit-jsx/README.md#setup)                               |
 | Generator JSX runtime and TypeScript content mapper | `@causeeffect/jsx-content-mapper`               | [Install and configure the mapper](packages/jsx-content-mapper/README.md#setup)                         |
 | Compile `.gtsx` files with Vite                     | `@causeeffect/jsx-content-mapper`               | [Configure JavaScript builds](packages/jsx-content-mapper/README.md#javascript-builds-and-declarations) |
-| VS Code language support                            | GTSX extension (`causeeffect.causeeffect-gtsx`) | [Install and enable GTSX](apps/vsc-extension/README.md#install-and-enable)                              |
+| VS Code language support                            | GTSX extension (`CauseEffect.causeeffect-gtsx`) | [Install GTSX](https://marketplace.visualstudio.com/items?itemName=CauseEffect.causeeffect-gtsx)        |
 
 For a Foldkit application, start with the Foldkit JSX guide. It covers installing
 the adapter, mapper, TypeScript, and Vite, then configuring them together. For
@@ -150,9 +150,11 @@ highlighting, hover types, completion, inline errors, go to definition,
 references, and rename. Hover over `element` in the generator example above to see
 its preserved yield, return, and next types.
 
-Follow the [extension installation guide](apps/vsc-extension/README.md#install-and-enable)
-to install GTSX, TypeScript Native Preview, and TypeScript 7 Nightly in VS Code
-**1.126 or later**. Then open your project folder, trust the workspace, and run
+Install [GTSX from the Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=CauseEffect.causeeffect-gtsx)
+in VS Code **1.126 or later**. Follow the
+[extension installation guide](apps/vsc-extension/README.md#install-and-enable)
+to enable TypeScript Native Preview and TypeScript 7 Nightly. Then open your
+project folder, trust the workspace, and run
 **GTSX: Enable TypeScript Native Language Support** from the Command Palette.
 
 Open a `.gtsx` file; its language mode should say **GTSX**. Hover over functions

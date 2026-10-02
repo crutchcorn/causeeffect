@@ -27,22 +27,21 @@ Requires **VS Code 1.126 or later** and the
 [TypeScript Native Preview extension](https://marketplace.visualstudio.com/items?itemName=TypeScriptTeam.native-preview)
 (`TypeScriptTeam.native-preview`) plus
 [TypeScript 7 Nightly](https://marketplace.visualstudio.com/items?itemName=TypeScriptTeam.vscode-typescript-nightly)
-(`TypeScriptTeam.vscode-typescript-nightly`). The VSIX declares both as extension
+(`TypeScriptTeam.vscode-typescript-nightly`). GTSX declares both as extension
 dependencies. Native Preview **1.0.1** bundles TypeScript **7.0.2**, which does not
 support content mappers; Nightly supplies the required **7.1** compiler. The API
 is experimental, and the compiler integration tests pin **7.1.0-dev.20261002.1**.
 Update Native Preview if GTSX reports an unsupported API.
 
-Install a packaged `gtsx.vsix` file. The extension's ID is
-`causeeffect.causeeffect-gtsx`:
+Install [GTSX from the Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=CauseEffect.causeeffect-gtsx),
+or use the extension's ID with the VS Code CLI:
 
 ```sh
-code --install-extension ./gtsx.vsix
+code --install-extension CauseEffect.causeeffect-gtsx
 ```
 
-You can also run **Extensions: Install from VSIX…** from the Command Palette
-and choose that file, including in VS Code Insiders. Install and enable both
-TypeScript extensions above. For packaging GTSX from source, see the
+Install and enable both TypeScript extensions above. For packaging GTSX from
+source, see the
 [contributor guide](https://github.com/crutchcorn/causeeffect/blob/main/AGENTS.md).
 
 Trust the workspace, open a `.gtsx` file, and run
