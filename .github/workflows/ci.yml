@@ -54,6 +54,11 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Make main available to Changesets
+        run: |
+          if ! git show-ref --verify --quiet refs/heads/main; then
+            git branch main origin/main
+          fi
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -71,10 +76,21 @@ jobs:
           workflow-id: publish.yml
       - name: Check affected projects
         if: steps.shas.outputs.noPreviousBuild != 'true'
-        run: pnpm exec nx affected -t test,lint,typecheck,build,format-check,changeset-status --parallel=3
+        run: pnpm exec nx affected -t test,lint,typecheck,build,format-check --parallel=3
       - name: Check all projects on first main build
         if: steps.shas.outputs.noPreviousBuild == 'true'
-        run: pnpm exec nx run-many -t test,lint,typecheck,build,format-check,changeset-status --parallel=3
+        run: pnpm exec nx run-many -t test,lint,typecheck,build,format-check --parallel=3
+      - name: Check Changesets
+        env:
+          HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          # Release PRs consume changesets; merge queues have already checked their PRs.
+          if [ "$HEAD_BRANCH" = 'changeset-release/main' ] || [ "$EVENT_NAME" = 'merge_group' ]; then
+            pnpm changeset:status --since=HEAD
+          else
+            pnpm changeset:status
+          fi
       - name: Select affected VS Code host tests
         id: host-projects
         env:
