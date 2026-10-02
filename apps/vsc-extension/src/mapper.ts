@@ -1,4 +1,4 @@
-import { access, readFile } from 'node:fs/promises';
+import { access, readFile, realpath } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { Uri, type WorkspaceFolder } from 'vscode';
@@ -81,10 +81,32 @@ export async function resolveContentMapper(
       const require = createRequire(
         join(folders[0].uri.fsPath, 'package.json'),
       );
-      return await loadMapper(
-        require.resolve(`${mapperPackage}/package.json`),
-        'workspace',
-      );
+      const ancestorDirectories = new Set<string>();
+      let ancestor = folders[0].uri.fsPath;
+      for (;;) {
+        ancestorDirectories.add(join(ancestor, 'node_modules'));
+        const parent = dirname(ancestor);
+        if (parent === ancestor) break;
+        ancestor = parent;
+      }
+      // Node also searches NODE_PATH and global folders. Those packages are not
+      // workspace installs; use only the normal ancestor node_modules lookup.
+      for (const directory of require.resolve.paths(mapperPackage) ?? []) {
+        if (!ancestorDirectories.has(directory)) continue;
+        const manifestPath = join(directory, mapperPackage, 'package.json');
+        try {
+          await access(manifestPath);
+        } catch (error) {
+          if (
+            error instanceof Error &&
+            'code' in error &&
+            error.code === 'ENOENT'
+          )
+            continue;
+          throw error;
+        }
+        return await loadMapper(await realpath(manifestPath), 'workspace');
+      }
     } catch (error) {
       if (!(
         error instanceof Error &&
