@@ -1,4 +1,4 @@
 {
-    "js/ts.experimental.useTsgo": true,
-    "js/ts.contentMappers.enabled": true
+  "js/ts.experimental.useTsgo": true,
+  "js/ts.contentMappers.enabled": true
 }

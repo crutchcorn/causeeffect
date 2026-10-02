@@ -1,65 +1,66 @@
 {
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "defaultBase": "main",
   "namedInputs": {
-    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "default": [
+      "{projectRoot}/**/*",
+      "!{projectRoot}/dist/**/*",
+      "!{projectRoot}/out-tsc/**/*",
+      "!{projectRoot}/test-output/**/*",
+      "sharedGlobals"
+    ],
     "production": [
       "default",
       "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
       "!{projectRoot}/tsconfig.spec.json",
       "!{projectRoot}/src/test-setup.[jt]s"
     ],
-    "sharedGlobals": []
-  },
-  "plugins": [
-    {
-      "plugin": "@nx/js/typescript",
-      "options": {
-        "typecheck": {
-          "targetName": "typecheck"
-        },
-        "build": {
-          "targetName": "build",
-          "configName": "tsconfig.lib.json",
-          "buildDepsName": "build-deps",
-          "watchDepsName": "watch-deps"
-        }
-      }
-    },
-    {
-      "plugin": "@nx/vite/plugin",
-      "options": {
-        "buildTargetName": "build",
-        "serveTargetName": "serve",
-        "devTargetName": "dev",
-        "previewTargetName": "preview",
-        "serveStaticTargetName": "serve-static",
-        "typecheckTargetName": "typecheck",
-        "buildDepsTargetName": "build-deps",
-        "watchDepsTargetName": "watch-deps"
-      }
-    },
-    {
-      "plugin": "@nx/eslint/plugin",
-      "options": {
-        "targetName": "lint"
-      }
-    },
-    {
-      "plugin": "@nx/vitest",
-      "options": {
-        "testTargetName": "test"
-      }
-    }
-  ],
-  "release": {
-    "projects": ["!utils", "!@org/source"],
-    "version": {
-      "preVersionCommand": "npx nx run-many -t build"
-    }
+    "sharedGlobals": [
+      "{workspaceRoot}/package.json",
+      "{workspaceRoot}/pnpm-lock.yaml",
+      "{workspaceRoot}/pnpm-workspace.yaml",
+      "{workspaceRoot}/tsconfig.base.json",
+      "{workspaceRoot}/nx.json",
+      "{workspaceRoot}/eslint.config.mjs",
+      "{workspaceRoot}/.prettierrc",
+      "{workspaceRoot}/.prettierignore",
+      "{workspaceRoot}/.nvmrc"
+    ]
   },
   "targetDefaults": {
+    "build": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"],
+      "outputs": ["{projectRoot}/dist"]
+    },
+    "typecheck": {
+      "cache": true,
+      "dependsOn": ["build", "^build"],
+      "inputs": ["default", "^production"],
+      "outputs": ["{projectRoot}/out-tsc"]
+    },
     "test": {
-      "dependsOn": ["^build"]
+      "cache": true,
+      "inputs": [
+        "default",
+        "^default",
+        {
+          "runtime": "node --version"
+        },
+        {
+          "runtime": "node -p process.platform"
+        }
+      ],
+      "dependsOn": ["build", "^build"]
+    },
+    "lint": {
+      "cache": true,
+      "inputs": ["default", "^{projectRoot}/package.json"]
+    },
+    "format-check": {
+      "cache": true,
+      "inputs": ["default"]
     }
   },
   "neverConnectToCloud": true,

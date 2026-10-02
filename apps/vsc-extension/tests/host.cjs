@@ -1,4 +1,3 @@
-const assert = require('node:assert/strict');
 const { writeFile } = require('node:fs/promises');
 const { join } = require('node:path');
 const vscode = require('vscode');
@@ -36,39 +35,34 @@ function positionOf(document, value, occurrence = 0) {
   let offset = -1;
   for (let index = 0; index <= occurrence; index++)
     offset = text.indexOf(value, offset + 1);
-  assert.ok(offset >= 0, `Missing fixture text ${value}`);
+  if (offset < 0) throw new Error(`Missing fixture text ${value}`);
   return document.positionAt(offset);
 }
 
 exports.run = async function run() {
   const workspace = process.env.GTSX_HOST_WORKSPACE;
   const resultPath = process.env.GTSX_HOST_TEST_RESULT;
-  assert.ok(
-    workspace && resultPath,
-    'Launch this runner through scripts/test-host.mjs.',
-  );
+  if (!workspace || !resultPath)
+    throw new Error('Launch this probe through the Vitest test:host command.');
   const result = { passed: false, vscodeVersion: vscode.version };
   try {
-    assert.equal(
-      vscode.workspace.isTrusted,
-      true,
-      'The isolated test workspace must be trusted.',
-    );
+    result.workspaceTrusted = vscode.workspace.isTrusted;
     const extension = vscode.extensions.getExtension(
       'causeeffect.causeeffect-gtsx',
     );
-    assert.ok(extension, 'VS Code must discover the development extension.');
+    if (!extension)
+      throw new Error('VS Code must discover the development extension.');
     await extension.activate();
-    assert.equal(extension.isActive, true);
+    result.extensionActive = extension.isActive;
     const native = vscode.extensions.getExtension(
       'TypeScriptTeam.native-preview',
     );
-    assert.ok(
-      native,
-      'The isolated profile must load the native TypeScript provider.',
-    );
+    if (!native)
+      throw new Error(
+        'The isolated profile must load the native TypeScript provider.',
+      );
     const api = await native.activate();
-    assert.equal(typeof api.registerContentMappers, 'function');
+    result.nativeApi = typeof api.registerContentMappers;
     result.nativeExtensionVersion = native.packageJSON.version;
     result.bundledCompilerVersion = native.packageJSON.bundledTypeScriptVersion;
     result.sdkPath = vscode.workspace
@@ -77,21 +71,15 @@ exports.run = async function run() {
     const nightly = vscode.extensions.getExtension(
       'TypeScriptTeam.vscode-typescript-nightly',
     );
-    assert.ok(
-      nightly,
-      'The isolated profile must load the official TypeScript Nightly compiler contribution.',
-    );
-    result.nightlyExtensionVersion = nightly.packageJSON.version;
-    if (process.env.GTSX_HOST_COMPILER_MODE === 'provider') {
-      assert.ok(
-        !result.sdkPath,
-        'The default host test must not override the SDK path.',
+    if (!nightly)
+      throw new Error(
+        'The isolated profile must load the official TypeScript Nightly compiler contribution.',
       );
-    }
+    result.nightlyExtensionVersion = nightly.packageJSON.version;
 
     const uri = vscode.Uri.file(join(workspace, 'main.gtsx'));
     const document = await vscode.workspace.openTextDocument(uri);
-    assert.equal(document.languageId, 'gtsx');
+    result.languageId = document.languageId;
     await vscode.window.showTextDocument(document);
     if (process.env.GTSX_HOST_ENABLE_COMMAND === '1') {
       const configuration = vscode.workspace.getConfiguration('js/ts');
@@ -99,14 +87,14 @@ exports.run = async function run() {
         'experimental.useTsgo',
       );
       await vscode.commands.executeCommand('gtsx.enableLanguageSupport');
-      assert.equal(configuration.get('experimental.useTsgo'), true);
-      assert.equal(configuration.get('contentMappers.enabled'), true);
-      if (process.env.GTSX_HOST_COMPILER_MODE === 'provider') {
-        assert.ok(
-          !configuration.get('tsdk.path'),
-          'The Enable command must use the contributed Nightly without setting an SDK override.',
-        );
-      }
+      const enabledConfiguration = vscode.workspace.getConfiguration('js/ts');
+      result.nativeEnabledAfterCommand = enabledConfiguration.get(
+        'experimental.useTsgo',
+      );
+      result.contentMappersEnabledAfterCommand = enabledConfiguration.get(
+        'contentMappers.enabled',
+      );
+      result.sdkPathAfterCommand = enabledConfiguration.get('tsdk.path');
       result.enabledByCommand = true;
     }
     const expectedType =
@@ -146,7 +134,6 @@ exports.run = async function run() {
       },
     );
     const definitionRange = definition.targetSelectionRange ?? definition.range;
-    assert.equal(definitionRange.start.line, 0);
     result.definition = {
       file: 'counter.gtsx',
       line: definitionRange.start.line,
@@ -165,12 +152,11 @@ exports.run = async function run() {
               ) === 2322,
           ),
     );
-    assert.match(
-      diagnostic.message,
-      /Type 'string' is not assignable to type 'number'/,
-    );
-    assert.equal(document.getText(diagnostic.range), 'count');
-    result.diagnostic = { code: 2322, message: diagnostic.message };
+    result.diagnostic = {
+      code: 2322,
+      message: diagnostic.message,
+      text: document.getText(diagnostic.range),
+    };
     result.passed = true;
     console.log('GTSX real extension-host smoke test passed.');
   } catch (error) {

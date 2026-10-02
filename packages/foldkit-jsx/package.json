@@ -37,6 +37,24 @@
   "nx": {
     "tags": [
       "scope:foldkit-jsx"
-    ]
+    ],
+    "targets": {
+      "format-check": {
+        "command": "prettier --check . --ignore-path ../../.prettierignore",
+        "options": {
+          "cwd": "packages/foldkit-jsx"
+        }
+      }
+    }
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/crutchcorn/causeeffect.git",
+    "directory": "packages/foldkit-jsx"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

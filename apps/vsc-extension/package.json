@@ -104,7 +104,7 @@
     "build": "node scripts/build.mjs",
     "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.json",
     "test": "vitest run",
-    "test:host": "node scripts/test-host.mjs",
+    "test:host": "vitest run --config vitest.host.config.mts",
     "lint": "eslint .",
     "vscode:prepublish": "pnpm run typecheck && pnpm run build",
     "package": "vsce package --no-dependencies --allow-missing-repository --out dist/gtsx.vsix"
@@ -123,6 +123,68 @@
   "nx": {
     "tags": [
       "scope:vsc-extension"
-    ]
+    ],
+    "includedScripts": [
+      "build",
+      "typecheck",
+      "test",
+      "lint",
+      "package"
+    ],
+    "implicitDependencies": [
+      "@causeeffect/foldkit-jsx",
+      "@causeeffect/foldkit-example"
+    ],
+    "targets": {
+      "build": {
+        "dependsOn": [
+          {
+            "target": "build",
+            "projects": [
+              "@causeeffect/jsx-content-mapper",
+              "@causeeffect/foldkit-jsx"
+            ]
+          }
+        ]
+      },
+      "typecheck": {
+        "dependsOn": [
+          {
+            "target": "build",
+            "projects": [
+              "@causeeffect/jsx-content-mapper",
+              "@causeeffect/foldkit-jsx"
+            ]
+          }
+        ]
+      },
+      "test": {
+        "dependsOn": [
+          "build"
+        ]
+      },
+      "test-host": {
+        "command": "pnpm run test:host",
+        "options": {
+          "cwd": "apps/vsc-extension"
+        },
+        "dependsOn": [
+          "test"
+        ],
+        "cache": false
+      },
+      "package": {
+        "dependsOn": [
+          "test-host"
+        ],
+        "cache": false
+      },
+      "format-check": {
+        "command": "prettier --check . --ignore-path ../../.prettierignore",
+        "options": {
+          "cwd": "apps/vsc-extension"
+        }
+      }
+    }
   }
 }

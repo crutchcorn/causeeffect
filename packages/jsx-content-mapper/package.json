@@ -77,6 +77,24 @@
   "nx": {
     "tags": [
       "scope:jsx-content-mapper"
-    ]
+    ],
+    "targets": {
+      "format-check": {
+        "command": "prettier --check . --ignore-path ../../.prettierignore",
+        "options": {
+          "cwd": "packages/jsx-content-mapper"
+        }
+      }
+    }
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/crutchcorn/causeeffect.git",
+    "directory": "packages/jsx-content-mapper"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

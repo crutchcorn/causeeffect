@@ -1,0 +1,145 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  merge_group:
+  workflow_call:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NX_DAEMON: 'false'
+
+jobs:
+  zizmor:
+    name: GitHub Actions security analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run Zizmor
+        uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
+        with:
+          inputs: .github/workflows
+          version: 1.30.1
+          persona: pedantic
+          online-audits: false
+          advanced-security: false
+          annotations: true
+
+  checks:
+    name: Affected projects
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      actions: read # Find the previous successful main workflow run.
+      contents: read
+      pull-requests: read # Resolve the PR base when checking a merge queue group.
+    outputs:
+      host-projects: ${{ steps.host-projects.outputs.projects }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Make main available to Changesets
+        run: |
+          if ! git show-ref --verify --quiet refs/heads/main; then
+            git branch main origin/main
+          fi
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: Set up PNPM
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Find affected commit range on main
+        id: shas
+        uses: nrwl/nx-set-shas@afb73a62d26e41464e9254689e1fd6122ee683c1 # v5.0.1
+        with:
+          main-branch-name: main
+          workflow-id: publish.yml
+      - name: Check affected projects
+        if: steps.shas.outputs.noPreviousBuild != 'true'
+        run: pnpm exec nx affected -t test,lint,typecheck,build,format-check --parallel=3
+      - name: Check all projects on first main build
+        if: steps.shas.outputs.noPreviousBuild == 'true'
+        run: pnpm exec nx run-many -t test,lint,typecheck,build,format-check --parallel=3
+      - name: Check Changesets
+        env:
+          HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          # Release PRs consume changesets; merge queues have already checked their PRs.
+          if [ "$HEAD_BRANCH" = 'changeset-release/main' ] || [ "$EVENT_NAME" = 'merge_group' ]; then
+            pnpm changeset:status --since=HEAD
+          else
+            pnpm changeset:status
+          fi
+      - name: Select affected VS Code host tests
+        id: host-projects
+        env:
+          FIRST_BUILD: ${{ steps.shas.outputs.noPreviousBuild }}
+        run: |
+          if [ "$FIRST_BUILD" = 'true' ]; then
+            projects=$(pnpm exec nx show projects --with-target=test-host --json)
+          else
+            projects=$(pnpm exec nx show projects --affected --with-target=test-host --json)
+          fi
+          compact=$(printf '%s' "$projects" | node -e 'let input = ""; process.stdin.on("data", chunk => input += chunk); process.stdin.on("end", () => process.stdout.write(JSON.parse(input).join(",")));')
+          echo "projects=$compact" >> "$GITHUB_OUTPUT"
+
+  host:
+    name: VS Code host tests
+    needs: checks
+    if: needs.checks.outputs.host-projects != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: Set up PNPM
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install VS Code and display dependencies
+        run: |
+          curl --fail --silent --show-error https://packages.microsoft.com/keys/microsoft.asc --output "$RUNNER_TEMP/microsoft.asc"
+          gpg --dearmor --output "$RUNNER_TEMP/microsoft.gpg" "$RUNNER_TEMP/microsoft.asc"
+          sudo install -m 644 "$RUNNER_TEMP/microsoft.gpg" /usr/share/keyrings/microsoft.gpg
+          printf '%s\n' 'Types: deb' 'URIs: https://packages.microsoft.com/repos/code' 'Suites: stable' 'Components: main' 'Architectures: amd64' 'Signed-By: /usr/share/keyrings/microsoft.gpg' | sudo tee /etc/apt/sources.list.d/vscode.sources > /dev/null
+          sudo apt-get update
+          sudo apt-get install --yes code xvfb
+      - name: Install TypeScript extensions
+        run: |
+          code --install-extension TypeScriptTeam.native-preview --force
+          code --install-extension TypeScriptTeam.vscode-typescript-nightly --force
+      - name: Run affected extension host tests and package
+        env:
+          HOST_PROJECTS: ${{ needs.checks.outputs.host-projects }}
+          CODE_BINARY: code
+        run: xvfb-run --auto-servernum pnpm exec nx run-many -t package --projects="$HOST_PROJECTS"

@@ -8,12 +8,16 @@ export default [
     ignores: [
       '**/dist',
       '**/build',
+      '**/coverage',
+      '**/out-tsc',
+      '**/.nx',
+      '**/examples/**',
       '**/vite.config.*.timestamp*',
       '**/vitest.config.*.timestamp*',
     ],
   },
   {
-    files: ['**/*.ts', '**/*.js'],
+    files: ['**/*.{js,jsx,cjs,mjs,ts,tsx,cts,mts}'],
     rules: {
       '@nx/enforce-module-boundaries': [
         'error',
@@ -22,36 +26,22 @@ export default [
           allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$'],
           depConstraints: [
             {
-              sourceTag: 'scope:shared',
-              onlyDependOnLibsWithTags: ['scope:shared'],
+              sourceTag: 'scope:jsx-content-mapper',
+              onlyDependOnLibsWithTags: ['scope:jsx-content-mapper'],
             },
             {
-              sourceTag: 'scope:async',
-              onlyDependOnLibsWithTags: ['scope:shared', 'scope:async'],
+              sourceTag: 'scope:foldkit-jsx',
+              onlyDependOnLibsWithTags: ['scope:foldkit-jsx'],
             },
             {
-              sourceTag: 'scope:colors',
-              onlyDependOnLibsWithTags: ['scope:shared', 'scope:colors'],
-            },
-            {
-              sourceTag: 'scope:strings',
-              onlyDependOnLibsWithTags: ['scope:shared', 'scope:strings'],
+              sourceTag: 'scope:vsc-extension',
+              onlyDependOnLibsWithTags: ['scope:jsx-content-mapper'],
             },
           ],
         },
       ],
+      '@typescript-eslint/no-unused-vars': 'error',
+      '@typescript-eslint/no-explicit-any': 'error',
     },
-  },
-  {
-    files: [
-      '**/*.ts',
-      '**/*.cts',
-      '**/*.mts',
-      '**/*.js',
-      '**/*.cjs',
-      '**/*.mjs',
-    ],
-    // Override or add rules here
-    rules: {},
   },
 ];
