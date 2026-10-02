@@ -5,6 +5,9 @@
   "references": [
     {
       "path": "./packages/jsx-content-mapper"
+    },
+    {
+      "path": "./packages/foldkit-jsx"
     }
   ],
   "compilerOptions": {}

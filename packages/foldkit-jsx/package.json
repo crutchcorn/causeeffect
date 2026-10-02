@@ -1,0 +1,42 @@
+{
+  "name": "@causeeffect/foldkit-jsx",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Classic JSX adapter for Foldkit's typed view builders",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "@causeeffect/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "!**/*.tsbuildinfo"
+  ],
+  "scripts": {
+    "build": "node node_modules/typescript/bin/tsc -p tsconfig.lib.json",
+    "typecheck": "node node_modules/typescript/bin/tsc -b",
+    "test": "vitest run",
+    "lint": "eslint ."
+  },
+  "peerDependencies": {
+    "foldkit": "^0.165.0"
+  },
+  "devDependencies": {
+    "@effect/platform-browser": "4.0.0",
+    "effect": "4.0.0",
+    "foldkit": "0.165.0",
+    "typescript": "~6.0.3",
+    "vitest": "~4.1.10"
+  },
+  "nx": {
+    "tags": [
+      "scope:foldkit-jsx"
+    ]
+  }
+}

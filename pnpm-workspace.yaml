@@ -2,4 +2,9 @@ allowBuilds:
   nx: true
 packages:
   - packages/*
+  - examples/*
 linkWorkspacePackages: true
+minimumReleaseAgeExclude:
+  - typescript
+  - '@typescript/*'
+  - 'foldkit'
