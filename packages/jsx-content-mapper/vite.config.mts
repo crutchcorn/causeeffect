@@ -1,11 +1,11 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig(() => ({
   root: import.meta.dirname,
-  cacheDir: '../../node_modules/.vite/packages/async',
+  cacheDir: '../../node_modules/.vite/packages/jsx-content-mapper',
   plugins: [],
   test: {
-    name: '@org/async',
+    name: '@causeeffect/jsx-content-mapper',
     watch: false,
     globals: true,
     environment: 'node',

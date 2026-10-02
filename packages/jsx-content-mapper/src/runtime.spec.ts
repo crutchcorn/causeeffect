@@ -2,6 +2,7 @@ import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 import {
   createComponent,
   createElement,
+  emptyProps,
   Fragment,
   type JSX,
 } from './runtime.js';
@@ -78,6 +79,93 @@ describe('generator JSX runtime', () => {
         unknown
       >
     >();
+  });
+
+  it('passes empty props to optional object props and no-argument components', () => {
+    function* Optional(props: { name?: string }) {
+      yield props.name ?? 'unnamed';
+    }
+    function* None(...props: []) {
+      yield (props as readonly unknown[])[0];
+    }
+    function* Required(props: { name: string }) {
+      yield props.name;
+    }
+
+    const optional = Optional(...emptyProps<typeof Optional>());
+    const none = None(...emptyProps<typeof None>());
+
+    expect(optional.next()).toEqual({ value: 'unnamed', done: false });
+    expect(none.next()).toEqual({ value: {}, done: false });
+
+    // @ts-expect-error An empty props object cannot satisfy required properties.
+    createComponent(Required(...emptyProps<typeof Required>()));
+  });
+
+  it('retains generic defaults and zero-argument overloads with empty props', () => {
+    function* Generic<Value = string>(props: { value?: Value }) {
+      yield props.value;
+    }
+    function Overloaded(): Generator<number, void, unknown>;
+    function Overloaded(props: {
+      value: string;
+    }): Generator<string, void, unknown>;
+    function* Overloaded(props?: {
+      value: string;
+    }): Generator<number | string, void, unknown> {
+      yield props?.value ?? 123;
+    }
+
+    const generic = createComponent(Generic(...emptyProps<typeof Generic>()));
+    const explicit = createComponent(
+      Generic<number>(...emptyProps<typeof Generic>()),
+    );
+    const overloaded = createComponent(
+      Overloaded(...emptyProps<typeof Overloaded>()),
+    );
+
+    expectTypeOf(generic).toEqualTypeOf<
+      JSX.GeneratorElement<string | undefined, void, unknown>
+    >();
+    expectTypeOf(explicit).toEqualTypeOf<
+      JSX.GeneratorElement<number | undefined, void, unknown>
+    >();
+    expectTypeOf(overloaded).toEqualTypeOf<
+      JSX.GeneratorElement<number, void, unknown>
+    >();
+  });
+
+  it('retains every generator channel across synchronous and asynchronous unions', () => {
+    function* Numeric(): Generator<number, string, boolean> {
+      yield 123;
+      return 'numeric';
+    }
+    function* Textual(): Generator<string, number, string> {
+      yield 'textual';
+      return 123;
+    }
+    async function* Asynchronous(): AsyncGenerator<string, number, string> {
+      yield 'asynchronous';
+      return 123;
+    }
+
+    const synchronous = createComponent(
+      Math.random() < 0.5 ? Numeric() : Textual(),
+    );
+    const mixed = createComponent(
+      Math.random() < 0.5 ? Numeric() : Asynchronous(),
+    );
+
+    expectTypeOf(synchronous).toEqualTypeOf<
+      | JSX.GeneratorElement<number, string, boolean>
+      | JSX.GeneratorElement<string, number, string>
+    >();
+    expectTypeOf(mixed).toEqualTypeOf<
+      | JSX.GeneratorElement<number, string, boolean>
+      | JSX.GeneratorElement<string, number, string>
+    >();
+    expect(synchronous.kind).toBe('component');
+    expect(mixed.kind).toBe('component');
   });
 
   it('represents intrinsic elements and fragments without generator effects', () => {

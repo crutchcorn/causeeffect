@@ -72,36 +72,30 @@ importers:
         specifier: ~4.1.10
         version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(vite@8.3.1(@types/node@24.13.3)(jiti@2.4.2)(yaml@2.9.0))
 
-  packages/async:
+  packages/jsx-content-mapper:
     dependencies:
-      tslib:
-        specifier: ^2.3.0
-        version: 2.8.1
-
-  packages/colors:
-    dependencies:
-      tslib:
-        specifier: ^2.3.0
-        version: 2.8.1
-
-  packages/strings:
-    dependencies:
+      '@babel/parser':
+        specifier: ^7.29.9
+        version: 7.29.9
+      '@babel/types':
+        specifier: ^7.29.0
+        version: 7.29.8
+      ts-content-mapper:
+        specifier: ^0.1.0
+        version: 0.1.0
       tslib:
         specifier: ^2.3.0
         version: 2.8.1
     devDependencies:
-      '@causeeffect/utils':
-        specifier: '*'
-        version: link:../utils
-      vite:
-        specifier: ^8.1.4
-        version: 8.3.1(@types/node@24.13.3)(jiti@2.4.2)(yaml@2.9.0)
-
-  packages/utils:
-    dependencies:
-      tslib:
-        specifier: ^2.3.0
-        version: 2.8.1
+      effect:
+        specifier: 4.0.0
+        version: 4.0.0
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      typescript-next:
+        specifier: npm:typescript@7.1.0-dev.20261002.1
+        version: typescript@7.1.0-dev.20261002.1
 
 packages:
 
@@ -1106,6 +1100,48 @@ packages:
     resolution: {integrity: sha512-8eQ9R218XORK+KLosnf4bu/QsUXvUyVwTbArg7/0NMB1Pu87OJKvj4nhFblkYE8gQV73mW1dx1ptlPCkwRGa7A==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
+  '@typescript/typescript-darwin-arm64@7.1.0-dev.20261002.1':
+    resolution: {integrity: sha512-LkHvgSd3kOiIL+PaKQ7eMKqmOekRuvg/SnfHj9KuH4UsZ1491YILix8KzPvaISkboDanrIHj26qO8s9DOq+L8w==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@typescript/typescript-darwin-x64@7.1.0-dev.20261002.1':
+    resolution: {integrity: sha512-XytAfaMLKJxjmyJIEUuhWWJr/ix65UIAp5dOJ+WLweaHyZuDUCJIlzxnkv/uS8JXLnsu9gIpDPWORBl+reqLGg==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@typescript/typescript-linux-arm64@7.1.0-dev.20261002.1':
+    resolution: {integrity: sha512-AX7fYonmCwQZ5C8o3sZoJiPBOl4+576vzVcWoRVlCB+3uwRGOXGcXlbqx89sY2Ct702EF9qbCL9VyQwBMVCn6w==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@typescript/typescript-linux-arm@7.1.0-dev.20261002.1':
+    resolution: {integrity: sha512-Mbd9vbp4szSztfWzYoBIjXqFl+E8OPZemykWdea28iuK7PcVv85waVM13ELLS8Z08egsDVY83THwezI4xO9sQQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm]
+    os: [linux]
+
+  '@typescript/typescript-linux-x64@7.1.0-dev.20261002.1':
+    resolution: {integrity: sha512-BY6EEdOXi6952Qy5rqUXLmCqXmRRjtIkDEtGcwhBvcFfJbnx2n32CigmYaVm136eXW6nTj19SBez2uAIrZNrkw==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [linux]
+
+  '@typescript/typescript-win32-arm64@7.1.0-dev.20261002.1':
+    resolution: {integrity: sha512-5TIaS4moa4vRxM6sMQJJIkxhTEQURCz7UgiI97RNEHIJV2B+tC2s5vNrARtegmpwSIYiZb/Qc4YeAdTvKTBQig==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@typescript/typescript-win32-x64@7.1.0-dev.20261002.1':
+    resolution: {integrity: sha512-beboQ6Tcismyt8HQqcAtFIFmnRPYAYyOFFWmMAEDmdOz2pSidPO+yUaxS0NecKG8wLDjOacN0bOaHDVnupqB5A==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [win32]
+
   '@verdaccio/auth@8.0.0-next-8.36':
     resolution: {integrity: sha512-uXPNPbo4fxSCfMXADJ5ypa6MSVlsw8i0pANmGsq0f+816yzt/slq6ge8IVUEX4C6pqn0muxemUYv588zPadSMg==}
     engines: {node: '>=18'}
@@ -1695,6 +1731,9 @@ packages:
 
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
+
+  effect@4.0.0:
+    resolution: {integrity: sha512-ooc1TG5t+FfzgYnFz2ff6BBKyZ7EwBRVXC7c4RhQUAD6/TZ2gTXXMeb4WX7a19ozQo4J73/QW+S00YAIresoMQ==}
 
   ejs@5.0.1:
     resolution: {integrity: sha512-COqBPFMxuPTPspXl2DkVYaDS3HtrD1GpzOGkNTJ1IYkifq/r9h8SVEFrjA3D9/VJGOEoMQcrlhpntcSUrM8k6A==}
@@ -3046,6 +3085,10 @@ packages:
     peerDependencies:
       typescript: '>=4.8.4'
 
+  ts-content-mapper@0.1.0:
+    resolution: {integrity: sha512-8OQYXCdQknsTR5EfnPCvJKA05dEaXzGbxfKGa1VeA+sxp1zItlZdIsxNNw3/sVxzVO4UTjkIKtXC15hpvckkaQ==}
+    engines: {node: ^22.18.0 || >=24.11.0}
+
   tsconfig-paths@4.2.0:
     resolution: {integrity: sha512-NoZ4roiN7LnbKn9QqE1amc9DJfzvZXxF4xDavcOWt1BPkdx+m+0gJuPM+S0vCe7zTJMYUP0R8pO2XMr+Y8oLIg==}
     engines: {node: '>=6'}
@@ -3080,6 +3123,11 @@ packages:
   typescript@6.0.3:
     resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
     engines: {node: '>=14.17'}
+    hasBin: true
+
+  typescript@7.1.0-dev.20261002.1:
+    resolution: {integrity: sha512-lNwmS9ucXyWmzsgVVDqlRXSecyOxZ7qu6hOV98rWkt15KVZm7MNOdcxiGhEEGp08SM9PyxSVZPKG5AQ8TI4JxQ==}
+    engines: {node: '>=16.20.0'}
     hasBin: true
 
   uglify-js@3.19.3:
@@ -3249,6 +3297,10 @@ packages:
         optional: true
       jsdom:
         optional: true
+
+  vscode-jsonrpc@9.0.3:
+    resolution: {integrity: sha512-qETYf9PCl1lVfwR+oBmMfc4vP2nqLNA35ABxorw3j06+xlKRgDVxbLgKm4Y/xPL0YWdeDjLoI4ImICIT3nB0zQ==}
+    engines: {node: '>=14.0.0'}
 
   wcwidth@1.0.1:
     resolution: {integrity: sha512-XHPEwS0q6TaxcvG85+8EYkbiCux2XtWG2mkc47Ng2A77BQu9+DqIOJldST4HgPkuea7dvKSj5VgX3P1d4rW8Tg==}
@@ -4566,6 +4618,27 @@ snapshots:
       '@typescript-eslint/types': 8.71.0
       eslint-visitor-keys: 5.0.1
 
+  '@typescript/typescript-darwin-arm64@7.1.0-dev.20261002.1':
+    optional: true
+
+  '@typescript/typescript-darwin-x64@7.1.0-dev.20261002.1':
+    optional: true
+
+  '@typescript/typescript-linux-arm64@7.1.0-dev.20261002.1':
+    optional: true
+
+  '@typescript/typescript-linux-arm@7.1.0-dev.20261002.1':
+    optional: true
+
+  '@typescript/typescript-linux-x64@7.1.0-dev.20261002.1':
+    optional: true
+
+  '@typescript/typescript-win32-arm64@7.1.0-dev.20261002.1':
+    optional: true
+
+  '@typescript/typescript-win32-x64@7.1.0-dev.20261002.1':
+    optional: true
+
   '@verdaccio/auth@8.0.0-next-8.36(supports-color@7.2.0)':
     dependencies:
       '@verdaccio/config': 8.0.0-next-8.36(supports-color@7.2.0)
@@ -5269,6 +5342,8 @@ snapshots:
       safe-buffer: 5.2.1
 
   ee-first@1.1.1: {}
+
+  effect@4.0.0: {}
 
   ejs@5.0.1: {}
 
@@ -6729,6 +6804,10 @@ snapshots:
     dependencies:
       typescript: 6.0.3
 
+  ts-content-mapper@0.1.0:
+    dependencies:
+      vscode-jsonrpc: 9.0.3
+
   tsconfig-paths@4.2.0:
     dependencies:
       json5: 2.2.3
@@ -6766,6 +6845,16 @@ snapshots:
       - supports-color
 
   typescript@6.0.3: {}
+
+  typescript@7.1.0-dev.20261002.1:
+    optionalDependencies:
+      '@typescript/typescript-darwin-arm64': 7.1.0-dev.20261002.1
+      '@typescript/typescript-darwin-x64': 7.1.0-dev.20261002.1
+      '@typescript/typescript-linux-arm': 7.1.0-dev.20261002.1
+      '@typescript/typescript-linux-arm64': 7.1.0-dev.20261002.1
+      '@typescript/typescript-linux-x64': 7.1.0-dev.20261002.1
+      '@typescript/typescript-win32-arm64': 7.1.0-dev.20261002.1
+      '@typescript/typescript-win32-x64': 7.1.0-dev.20261002.1
 
   uglify-js@3.19.3:
     optional: true
@@ -6923,6 +7012,8 @@ snapshots:
       '@vitest/ui': 4.1.11(vitest@4.1.11)
     transitivePeerDependencies:
       - msw
+
+  vscode-jsonrpc@9.0.3: {}
 
   wcwidth@1.0.1:
     dependencies:

@@ -69,19 +69,48 @@ export function createElement(
   return Object.freeze({ kind: 'intrinsic', type, props: snapshot });
 }
 
-/** Describe a generator component while preserving its yield, return and next. */
+/**
+ * Supply the usual empty JSX props object without requiring no-argument
+ * components to declare a props parameter. The tuple type lets the direct
+ * component call still diagnose missing required properties.
+ */
+export function emptyProps<
+  Component extends (...args: never[]) => unknown,
+>(): Component extends () => unknown ? [] : [Record<never, never>] {
+  return [{}] as Component extends () => unknown ? [] : [Record<never, never>];
+}
+
+type IteratorElement<Value> =
+  Value extends Generator<infer Yield, infer Return, infer Next>
+    ? JSX.GeneratorElement<Yield, Return, Next>
+    : Value extends AsyncGenerator<infer Yield, infer Return, infer Next>
+      ? JSX.GeneratorElement<Yield, Return, Next>
+      : never;
+
+type OrdinaryValue<Value> = Exclude<
+  Value,
+  Generator<unknown, unknown, never> | AsyncGenerator<unknown, unknown, never>
+>;
+
+/** Preserve generator union branches and the complete ordinary return type. */
+export type ComponentElement<Value> =
+  | IteratorElement<Value>
+  | ([OrdinaryValue<Value>] extends [never]
+      ? never
+      : JSX.GeneratorElement<never, OrdinaryValue<Value>, never>);
+
+/**
+ * Describe a component while preserving each generator's protocol parameters.
+ * Ordinary component values retain their return type and are evaluated by the
+ * direct component call.
+ */
 export function createComponent<Yield, Return, Next>(
   value: Generator<Yield, Return, Next>,
 ): JSX.GeneratorElement<Yield, Return, Next>;
 export function createComponent<Yield, Return, Next>(
   value: AsyncGenerator<Yield, Return, Next>,
 ): JSX.GeneratorElement<Yield, Return, Next>;
-/** Ordinary components retain their return type and are evaluated by the call. */
-export function createComponent<Return>(
-  value: Return,
-): JSX.GeneratorElement<never, Return, never>;
-export function createComponent(
-  value: unknown,
-): JSX.GeneratorElement<unknown, unknown, unknown> {
+export function createComponent<Value>(value: Value): ComponentElement<Value>;
+export function createComponent(value: unknown): unknown {
   return Object.freeze({ kind: 'component', value });
 }
