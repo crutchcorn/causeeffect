@@ -1,6 +1,7 @@
 allowBuilds:
   nx: true
 packages:
+  - apps/*
   - packages/*
   - examples/*
 linkWorkspacePackages: true

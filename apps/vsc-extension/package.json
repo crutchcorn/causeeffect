@@ -1,0 +1,121 @@
+{
+  "name": "causeeffect-gtsx",
+  "displayName": "GTSX",
+  "description": "Generator-preserving TypeScript JSX language support for .gtsx files",
+  "version": "0.0.1",
+  "publisher": "causeeffect",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "vscode": "^1.126.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "extensionDependencies": [
+    "TypeScriptTeam.native-preview"
+  ],
+  "activationEvents": [
+    "onLanguage:gtsx"
+  ],
+  "main": "./dist/extension.cjs",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Syntax highlighting is available; TypeScript language support requires workspace trust."
+    },
+    "virtualWorkspaces": {
+      "supported": false
+    }
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "gtsx",
+        "aliases": [
+          "GTSX",
+          "gtsx"
+        ],
+        "extensions": [
+          ".gtsx"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "gtsx",
+        "scopeName": "source.gtsx",
+        "path": "./syntaxes/gtsx.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "gtsx.enableLanguageSupport",
+        "title": "GTSX: Enable TypeScript Native Language Support"
+      },
+      {
+        "command": "gtsx.restartLanguageSupport",
+        "title": "GTSX: Refresh Language Support"
+      }
+    ],
+    "configuration": {
+      "title": "GTSX",
+      "properties": {
+        "gtsx.inferredProjectOptions": {
+          "type": "object",
+          "scope": "window",
+          "default": {},
+          "markdownDescription": "Mapper options for loose GTSX files. Projects with a tsconfig.json use their own contentMappers configuration.",
+          "properties": {
+            "jsxRuntime": {
+              "type": "string",
+              "enum": [
+                "generator",
+                "classic"
+              ]
+            },
+            "runtimeModule": {
+              "type": "string"
+            },
+            "jsxFactory": {
+              "type": "string"
+            },
+            "jsxFragmentFactory": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.json",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "vscode:prepublish": "pnpm run typecheck && pnpm run build",
+    "package": "vsce package --no-dependencies --allow-missing-repository --out dist/gtsx.vsix"
+  },
+  "dependencies": {
+    "@causeeffect/jsx-content-mapper": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/vscode": "1.125.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
+    "typescript": "~6.0.3",
+    "typescript-next": "npm:typescript@7.1.0-dev.20261002.1",
+    "vscode-jsonrpc": "^9.0.3"
+  },
+  "nx": {
+    "tags": [
+      "scope:vsc-extension"
+    ]
+  }
+}

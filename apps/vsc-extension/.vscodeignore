@@ -1,0 +1,10 @@
+**
+!package.json
+!README.md
+!LICENSE
+!language-configuration.json
+!syntaxes/**
+!dist/**
+dist/**/*.map
+dist/**/*.vsix
+dist/**/*.tsbuildinfo

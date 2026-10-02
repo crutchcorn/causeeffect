@@ -1,0 +1,5 @@
+{
+  "name": "GTSX",
+  "scopeName": "source.gtsx",
+  "patterns": [{ "include": "source.tsx" }]
+}
