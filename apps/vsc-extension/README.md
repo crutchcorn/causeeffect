@@ -129,6 +129,8 @@ Tests exercise activation, trust, disposal, options, and mapper resolution. Nati
 LSP integration tests start the pinned TypeScript 7.1 compiler and check generator
 hover types, `.gtsx` definitions, Unicode diagnostic ranges, edits, and rename in
 both configured and inferred projects.
+They also check the Foldkit example's classic factory while a generator fallback
+is registered, including mapped diagnostics after an edit and its restoration.
 
 For a real VS Code extension host smoke test, install Native Preview locally and
 run:

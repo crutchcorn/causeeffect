@@ -9,6 +9,9 @@
   factory. Foldkit-specific behavior belongs here.
 - `examples/foldkit` is the runnable application demonstrating `.gtsx` Views and
   Submodels.
+- `apps/vsc-extension` registers `.gtsx` with TypeScript Native Preview and
+  bundles a mapper for loose files. Configured projects keep their own mapper
+  package and options.
 
 Keep the root README focused on users: what the project does, a small example,
 and setup. Put contributor instructions here and detailed package API guidance
@@ -86,6 +89,22 @@ pnpm exec prettier --write <changed-files>
 pnpm exec prettier --check <changed-files>
 git diff --check
 ```
+
+For extension changes, run:
+
+```sh
+pnpm --filter causeeffect-gtsx typecheck
+pnpm --filter causeeffect-gtsx test
+pnpm --filter causeeffect-gtsx lint
+pnpm --filter causeeffect-gtsx test:host
+pnpm --filter causeeffect-gtsx package
+```
+
+The extension's native LSP tests cover generator projects and the configured
+Foldkit example, including its classic JSX options. The host smoke test requires
+a local VS Code installation and TypeScript Native Preview; it uses temporary
+settings and workspace directories. Package the VSIX after tests because test
+setup rebuilds the extension's `dist` directory.
 
 When incremental commits are requested, commit coherent completed changes as
 the work progresses. Include only the files belonging to the task.
