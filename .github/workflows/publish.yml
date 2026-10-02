@@ -1,0 +1,124 @@
+name: Release npm packages
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+
+env:
+  NX_DAEMON: 'false'
+
+jobs:
+  validate:
+    name: Validate merged changes
+    uses: $/.github/workflows/ci.yml
+    permissions:
+      actions: read # Reusable CI finds the previous successful main run.
+      contents: read
+      pull-requests: read # Reusable CI resolves the base of merge queue groups.
+
+  release-mode:
+    name: Select Changesets release mode
+    needs: validate
+    if: github.repository == 'crutchcorn/causeeffect'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      mode: ${{ steps.release-mode.outputs.mode }}
+    steps:
+      - name: Check out validated commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: Set up PNPM
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Select versioning or publishing
+        id: release-mode
+        uses: changesets/action/select-mode@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+
+  version:
+    name: Create or update the release PR
+    needs: release-mode
+    if: needs.release-mode.outputs.mode == 'version'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write # Dispatch CI on the release PR created with GITHUB_TOKEN.
+      contents: write # Changesets commits version bumps and changelogs to its release branch.
+      pull-requests: write # Changesets creates or updates the release pull request.
+    steps:
+      - name: Check out validated commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: Set up PNPM
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Create or update the release PR with Changesets
+        id: version
+        uses: changesets/action/version@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          script: pnpm release:version
+          commit-message: 'chore: version packages'
+          pr-title: 'chore: release packages'
+      - name: Run CI on the generated release PR
+        if: steps.version.outputs.pr-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_PR: ${{ steps.version.outputs.pr-number }}
+        run: |
+          release_branch=$(gh pr view "$RELEASE_PR" --repo "$GITHUB_REPOSITORY" --json headRefName --jq '.headRefName')
+          gh workflow run ci.yml --ref "$release_branch" --repo "$GITHUB_REPOSITORY"
+
+  publish:
+    name: Publish versions from the merged release PR
+    needs: release-mode
+    if: needs.release-mode.outputs.mode == 'publish'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write # npm exchanges the GitHub OIDC token for publish access.
+    steps:
+      - name: Check out validated commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node.js and npm registry
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Set up PNPM
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Install dependencies without a shared cache
+        run: pnpm install --frozen-lockfile
+      - name: Build and publish through Nx with Changesets and npm OIDC
+        uses: changesets/action/publish@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          script: pnpm release:publish
+          create-github-releases: false
+          push-git-tags: false

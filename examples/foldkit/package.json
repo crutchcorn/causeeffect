@@ -26,6 +26,14 @@
   "nx": {
     "tags": [
       "scope:foldkit-example"
-    ]
+    ],
+    "targets": {
+      "format-check": {
+        "command": "prettier --check . --ignore-path ../../.prettierignore",
+        "options": {
+          "cwd": "examples/foldkit"
+        }
+      }
+    }
   }
 }

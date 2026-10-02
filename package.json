@@ -2,9 +2,26 @@
   "name": "@causeeffect/root",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "build": "nx run-many -t build",
+    "test": "nx run-many -t test",
+    "test:host": "nx run causeeffect-gtsx:test-host",
+    "typecheck": "nx run-many -t typecheck",
+    "lint": "nx run-many -t lint lint-ci",
+    "lint:ci": "nx run @causeeffect/root:lint-ci",
+    "format": "nx format:write --all",
+    "format:check": "nx format:check --all",
+    "check": "nx run-many -t format-check lint lint-ci changeset-status typecheck test build",
+    "affected": "nx affected -t format-check lint lint-ci changeset-status typecheck test build",
+    "release:version": "nx run @causeeffect/root:version-packages",
+    "release:publish": "nx run @causeeffect/root:publish-packages",
+    "changeset": "changeset",
+    "changeset:status": "nx run @causeeffect/root:changeset-status",
+    "release:plan": "nx run @causeeffect/root:publish-plan"
+  },
   "private": true,
   "devDependencies": {
+    "@changesets/cli": "3.0.3",
     "@eslint/js": "^10.0.1",
     "@nx/eslint": "23.2.0",
     "@nx/eslint-plugin": "23.2.0",
@@ -37,7 +54,53 @@
           "config": ".verdaccio/config.yml",
           "storage": "tmp/local-registry/storage"
         }
+      },
+      "lint": {
+        "command": "eslint \"*.{js,jsx,cjs,mjs,ts,tsx,cts,mts}\" \"scripts/**/*.{js,jsx,cjs,mjs,ts,tsx,cts,mts}\" \".github/**/*.{js,jsx,cjs,mjs,ts,tsx,cts,mts}\" --no-error-on-unmatched-pattern --max-warnings=0"
+      },
+      "lint-ci": {
+        "command": "zizmor --offline --pedantic --strict-collection .github/workflows",
+        "cache": true,
+        "inputs": [
+          "{workspaceRoot}/.github/**/*",
+          {
+            "runtime": "zizmor --version"
+          }
+        ]
+      },
+      "format-check": {
+        "command": "prettier --check \"*.{json,md,mjs,mts,yaml,yml}\" .prettierrc .changeset .github .vscode assets scripts --no-error-on-unmatched-pattern"
+      },
+      "publish-packages": {
+        "command": "changeset publish",
+        "cache": false,
+        "dependsOn": [
+          {
+            "target": "build",
+            "projects": [
+              "@causeeffect/jsx-content-mapper",
+              "@causeeffect/foldkit-jsx"
+            ]
+          }
+        ]
+      },
+      "changeset-status": {
+        "command": "changeset status",
+        "cache": false
+      },
+      "version-packages": {
+        "command": "changeset version && pnpm install --lockfile-only --ignore-scripts",
+        "cache": false
+      },
+      "publish-plan": {
+        "command": "changeset publish-plan",
+        "cache": false
       }
     }
+  },
+  "packageManager": "pnpm@12.8.1",
+  "engines": {
+    "node": "^22.18.0 || >=24.11.0",
+    "pnpm": ">=12 <13"
   }
 }
