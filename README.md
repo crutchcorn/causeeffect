@@ -119,35 +119,29 @@ The yielded value is a `number`, and the JSX return is inferred as
 next-value type, which the mapper also keeps. All three remain available through
 JSX. This generator example is separate from Foldkit's synchronous Views above.
 
-## Install and run
+## Installation
 
-**This currently requires TypeScript 7.1 nightly.** The example pins
-`7.1.0-dev.20261002.1`; stable TypeScript cannot type-check these `.gtsx` files yet.
-The setup below installs and configures the nightly compiler and Effect 4 for you.
+Use Node.js **24.11 or newer** and a TypeScript **7.1 nightly**. The setup guides
+pin `7.1.0-dev.20261002.1`; stable TypeScript cannot type-check `.gtsx` files yet.
+Install the packages into your application with npm, following the guide for the
+component you want to use:
 
-With Node.js **24.11 or newer** and **PNPM 10** installed:
+| Component                                           | Package                                         | Setup guide                                                                                             |
+| --------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Foldkit Views and Submodels with JSX                | `@causeeffect/foldkit-jsx`                      | [Install and configure Foldkit JSX](packages/foldkit-jsx/README.md#setup)                               |
+| Generator JSX runtime and TypeScript content mapper | `@causeeffect/jsx-content-mapper`               | [Install and configure the mapper](packages/jsx-content-mapper/README.md#setup)                         |
+| Compile `.gtsx` files with Vite                     | `@causeeffect/jsx-content-mapper`               | [Configure JavaScript builds](packages/jsx-content-mapper/README.md#javascript-builds-and-declarations) |
+| VS Code language support                            | GTSX extension (`causeeffect.causeeffect-gtsx`) | [Install and enable GTSX](apps/vsc-extension/README.md#install-and-enable)                              |
 
-```sh
-git clone https://github.com/crutchcorn/causeeffect.git
-cd causeeffect
-pnpm install
-pnpm --filter @causeeffect/foldkit-example dev
-```
+For a Foldkit application, start with the Foldkit JSX guide. It covers installing
+the adapter, mapper, TypeScript, and Vite, then configuring them together. For
+generator components, start with the mapper guide. The Vite plugin is included in
+the mapper package through its `/vite` export.
 
-Open the URL printed by Vite. The example shows two independent counter
-Submodels, typed button messages, and a parent action that resets both counters.
-
-To check your `.gtsx` files, run:
-
-```sh
-pnpm --filter @causeeffect/foldkit-example typecheck
-```
-
-The [complete Foldkit example](examples/foldkit/README.md) includes application
-setup and Submodels. To use the same setup in another application, start with its
-[TypeScript configuration](examples/foldkit/tsconfig.json) and
-[Vite configuration](examples/foldkit/vite.config.mts), and write your Views in
-`.gtsx` files.
+The [runnable Foldkit example](examples/foldkit/README.md) demonstrates two
+independent counter Submodels, typed button messages, and a parent action that
+resets both counters. Its README covers running the example and explains the
+application's Views and Submodels.
 
 ## VS Code extension
 
@@ -156,40 +150,16 @@ highlighting, hover types, completion, inline errors, go to definition,
 references, and rename. Hover over `element` in the generator example above to see
 its preserved yield, return, and next types.
 
-### Install and enable
+Follow the [extension installation guide](apps/vsc-extension/README.md#install-and-enable)
+to install GTSX, TypeScript Native Preview, and TypeScript 7 Nightly in VS Code
+**1.126 or later**. Then open your project folder, trust the workspace, and run
+**GTSX: Enable TypeScript Native Language Support** from the Command Palette.
 
-1. Use **VS Code 1.126 or later** and install and enable
-   [TypeScript Native Preview](https://marketplace.visualstudio.com/items?itemName=TypeScriptTeam.native-preview)
-   and
-   [TypeScript 7 Nightly](https://marketplace.visualstudio.com/items?itemName=TypeScriptTeam.vscode-typescript-nightly).
-   Nightly supplies the TypeScript **7.1** compiler needed for `.gtsx` support.
-2. Build and install GTSX from the repository root, after `pnpm install`:
-
-   ```sh
-   pnpm --filter causeeffect-gtsx package
-   code --install-extension apps/vsc-extension/dist/gtsx.vsix
-   ```
-
-   You can also use **Extensions: Install from VSIX…** in the Command Palette
-   and select `apps/vsc-extension/dist/gtsx.vsix`, including in VS Code Insiders.
-
-3. Open your project folder and trust the workspace. Run
-   **GTSX: Enable TypeScript Native Language Support** from the Command Palette.
-   This enables native TypeScript and content mappers for the workspace and
-   restarts the language service to pick up Nightly.
-4. Open a `.gtsx` file. The editor's language mode should say **GTSX**. Hover over
-   functions and variables to inspect their types, use completion while writing
-   JSX, and use the usual TypeScript navigation and rename actions.
-
-### Use it in your project
-
-The [Foldkit example](examples/foldkit/README.md) is already configured; open
-[counter.gtsx](examples/foldkit/src/counter.gtsx) to try the editor support. For
-another project, follow the
-[generator JSX setup](packages/jsx-content-mapper/README.md#setup) or use the
-[Foldkit TypeScript configuration](examples/foldkit/tsconfig.json). The extension
-uses your project's mapper settings, including Foldkit's classic JSX factory.
-For loose `.gtsx` files, it supplies a bundled mapper when needed.
+Open a `.gtsx` file; its language mode should say **GTSX**. Hover over functions
+and variables to inspect their types, use completion while writing JSX, and use
+the usual TypeScript navigation and rename actions. The extension uses your
+project's mapper settings, including Foldkit's classic JSX factory. For loose
+files, it supplies a bundled mapper when needed.
 
 After installing or rebuilding a project's mapper, run **GTSX: Refresh Language
 Support**. If hover or completion is missing, make sure both TypeScript extensions

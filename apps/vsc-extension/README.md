@@ -18,8 +18,8 @@ const Result = <Test />;
 TypeScript infers `unknown` for this generator's next parameter. An explicit
 `Generator<Yield, Return, Next>` annotation preserves all three parameters,
 including `never` when requested. The mapper also preserves yielded Effect v4
-types; `packages/jsx-content-mapper/README.md` in the repository documents the
-mapper and Effect examples.
+types; the [mapper guide](https://github.com/crutchcorn/causeeffect/blob/main/packages/jsx-content-mapper/README.md)
+documents the runtime and Effect examples.
 
 ## Install and enable
 
@@ -33,13 +33,17 @@ support content mappers; Nightly supplies the required **7.1** compiler. The API
 is experimental, and the compiler integration tests pin **7.1.0-dev.20261002.1**.
 Update Native Preview if GTSX reports an unsupported API.
 
-From the repository root:
+Install a packaged `gtsx.vsix` file. The extension's ID is
+`causeeffect.causeeffect-gtsx`:
 
 ```sh
-pnpm install
-pnpm --filter causeeffect-gtsx package
-code --install-extension apps/vsc-extension/dist/gtsx.vsix
+code --install-extension ./gtsx.vsix
 ```
+
+You can also run **Extensions: Install from VSIX…** from the Command Palette
+and choose that file, including in VS Code Insiders. Install and enable both
+TypeScript extensions above. For packaging GTSX from source, see the
+[contributor guide](https://github.com/crutchcorn/causeeffect/blob/main/AGENTS.md).
 
 Trust the workspace, open a `.gtsx` file, and run
 **GTSX: Enable TypeScript Native Language Support** from the Command Palette.
@@ -69,10 +73,10 @@ explicit SDK settings intact.
 
 ## Projects and loose files
 
-Projects with `tsconfig.json` install and configure their own mapper:
+Projects with `tsconfig.json` install and configure their own mapper from npm:
 
 ```sh
-pnpm add @causeeffect/jsx-content-mapper
+npm install @causeeffect/jsx-content-mapper
 ```
 
 ```json
@@ -95,7 +99,11 @@ pnpm add @causeeffect/jsx-content-mapper
 
 The extension registers the file extension with the native language service;
 configured projects use their own package and mapper options. Use the same options
-in the build tool; language support does not emit application JavaScript.
+in the build tool; language support does not emit application JavaScript. The
+[mapper setup guide](https://github.com/crutchcorn/causeeffect/blob/main/packages/jsx-content-mapper/README.md#setup)
+covers installing the CLI compiler and runtime, and the
+[Foldkit JSX guide](https://github.com/crutchcorn/causeeffect/blob/main/packages/foldkit-jsx/README.md#setup)
+covers Foldkit's classic factory configuration.
 
 Loose files work without installing the mapper. For one local workspace folder,
 the extension prefers a valid installed `@causeeffect/jsx-content-mapper` and
@@ -122,43 +130,10 @@ options on the `contentMappers` entry in `tsconfig.json`. Run
 **GTSX: Refresh Language Support** after installing or rebuilding a workspace
 mapper; changing inferred options or workspace folders refreshes automatically.
 
-## Development
-
-```sh
-pnpm --filter causeeffect-gtsx build
-pnpm --filter causeeffect-gtsx typecheck
-pnpm --filter causeeffect-gtsx test
-pnpm --filter causeeffect-gtsx lint
-code --extensionDevelopmentPath="$PWD/apps/vsc-extension"
-```
-
-The build compiles the existing mapper, bundles the extension and mapper process
-with esbuild, and copies the runtime and its declarations. The VSIX contains these
-artifacts and dependency license notices; it does not require repository symlinks
-or a separate Node installation for inferred projects. Workspace-installed mappers
-in configured projects retain their own executable requirements.
-
-Tests exercise activation, trust, disposal, options, and mapper resolution. Native
-LSP integration tests start the pinned TypeScript 7.1 compiler and check generator
-hover types, `.gtsx` definitions, Unicode diagnostic ranges, edits, and rename in
-both configured and inferred projects.
-They also check the Foldkit example's classic factory while a generator fallback
-is registered, including mapped diagnostics after an edit and its restoration.
-
-For a real VS Code extension host smoke test, install Native Preview and
-TypeScript 7 Nightly locally and run:
-
-```sh
-CODE_BINARY=code \
-NATIVE_EXTENSION_PATH=/path/to/typescriptteam.native-preview-extension \
-NIGHTLY_EXTENSION_PATH=/path/to/typescriptteam.vscode-typescript-nightly-extension \
-pnpm --filter causeeffect-gtsx test:host
-```
-
-The host test uses temporary settings, extensions, and workspace directories.
-Its default run invokes the actual Enable command and checks the compiler from
-the installed Nightly extension, without a `js/ts.tsdk.path` override. Set
-`HOST_TEST_COMPILER=nightly` to test the pinned SDK separately.
+The VSIX bundles the extension, mapper process, runtime declarations, and
+dependency license notices. Loose files do not need a separate Node installation.
+Workspace-installed mappers in configured projects require Node.js
+`^22.18.0 || >=24.11.0`.
 
 ## Integration
 
