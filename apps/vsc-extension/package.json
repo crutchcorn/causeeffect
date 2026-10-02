@@ -2,8 +2,9 @@
   "name": "causeeffect-gtsx",
   "displayName": "GTSX",
   "description": "Generator-preserving TypeScript JSX language support for .gtsx files",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "causeeffect",
+  "icon": "./assets/icon.png",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -44,7 +45,11 @@
         "extensions": [
           ".gtsx"
         ],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./assets/logo-light.svg",
+          "dark": "./assets/logo-dark.svg"
+        }
       }
     ],
     "grammars": [

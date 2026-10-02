@@ -3,6 +3,7 @@
 !README.md
 !LICENSE
 !language-configuration.json
+!assets/**
 !syntaxes/**
 !dist/**
 dist/**/*.map
