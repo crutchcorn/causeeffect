@@ -173,7 +173,7 @@ describe('transformGtsx', () => {
     expect(result.value).toEqual(['receiver', 123]);
   });
 
-  it('supplies an empty props object for components without attributes or rendered children', () => {
+  it('calls components without attributes or rendered children with zero arguments', () => {
     const { empty, comments, explicit } = runContent<{
       empty: runtime.ComponentDescription<never, number, never>;
       comments: runtime.ComponentDescription<never, number, never>;
@@ -184,8 +184,8 @@ describe('transformGtsx', () => {
       export const comments = <Count>{/* ignored */}</Count>;
       export const explicit = <Count {...{}} />;
     `);
-    expect(empty.value).toBe(1);
-    expect(comments.value).toBe(1);
+    expect(empty.value).toBe(0);
+    expect(comments.value).toBe(0);
     expect(explicit.value).toBe(1);
   });
 
@@ -235,7 +235,7 @@ describe('transformGtsx', () => {
     expect(
       new Set(imported.specifiers.map((specifier) => specifier.local.name))
         .size,
-    ).toBe(4);
+    ).toBe(3);
     expect(result.text).toContain('const __gtsx = 1; const __gtsx_ = 2;');
   });
 

@@ -10,7 +10,7 @@ import {
 } from 'ts-content-mapper';
 
 export interface GtsxOptions {
-  /** Module exporting createElement, createComponent, emptyProps, and Fragment. */
+  /** Module exporting createElement, createComponent, and Fragment. */
   runtimeModule?: string;
 }
 
@@ -72,7 +72,6 @@ export function transformGtsx(
   while (content.includes(prefix)) prefix += '_';
   const element = `${prefix}_element`;
   const component = `${prefix}_component`;
-  const emptyProps = `${prefix}_props`;
   const fragment = `${prefix}_fragment`;
   const runtime =
     options.runtimeModule ?? '@causeeffect/jsx-content-mapper/runtime';
@@ -244,17 +243,6 @@ export function transformGtsx(
       builder.append('(');
       if (opening.attributes.length || t.react.buildChildren(node).length) {
         emitProps(node);
-      } else {
-        // Keep direct-call inference for no-argument and optional-props components.
-        builder.append(`...${emptyProps}<typeof `);
-        builder.appendVerbatim(startOf(name), endOf(name));
-        if (opening.typeParameters) {
-          builder.appendVerbatim(
-            startOf(opening.typeParameters),
-            endOf(opening.typeParameters),
-          );
-        }
-        builder.append('>()');
       }
       builder.append('))');
     }
@@ -267,7 +255,7 @@ export function transformGtsx(
   const importStart = hashbangEnd < 0 ? 0 : hashbangEnd + 1;
   builder.appendVerbatim(0, importStart);
   builder.append(
-    `import { createElement as ${element}, createComponent as ${component}, emptyProps as ${emptyProps}, Fragment as ${fragment} } from ${JSON.stringify(runtime)};\n`,
+    `import { createElement as ${element}, createComponent as ${component}, Fragment as ${fragment} } from ${JSON.stringify(runtime)};\n`,
   );
   emitRange(importStart, content.length);
   return {

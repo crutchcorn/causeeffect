@@ -69,17 +69,6 @@ export function createElement(
   return Object.freeze({ kind: 'intrinsic', type, props: snapshot });
 }
 
-/**
- * Supply the usual empty JSX props object without requiring no-argument
- * components to declare a props parameter. The tuple type lets the direct
- * component call still diagnose missing required properties.
- */
-export function emptyProps<
-  Component extends (...args: never[]) => unknown,
->(): Component extends () => unknown ? [] : [Record<never, never>] {
-  return [{}] as Component extends () => unknown ? [] : [Record<never, never>];
-}
-
 type IteratorElement<Value> =
   Value extends Generator<infer Yield, infer Return, infer Next>
     ? JSX.GeneratorElement<Yield, Return, Next>
