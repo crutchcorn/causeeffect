@@ -1,0 +1,78 @@
+import { Schema } from 'effect';
+import { Submodel, type Update } from 'foldkit';
+import { defineMessageUnion } from 'foldkit/message';
+import { createJsx } from '@causeeffect/foldkit-jsx';
+
+export const Model = Schema.Struct({ count: Schema.Number });
+export type Model = typeof Model.Type;
+
+export const Message = defineMessageUnion({
+  ClickedDecrement: {},
+  ClickedIncrement: {},
+  ClickedReset: {},
+});
+export type Message = typeof Message.Type;
+
+export const init = (): Model => ({ count: 0 });
+
+export const update = (model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedDecrement: () => ({ model: { count: model.count - 1 } }),
+    ClickedIncrement: () => ({ model: { count: model.count + 1 } }),
+    ClickedReset: () => ({ model: init() }),
+  });
+
+// Parent-driven resets still use the child's update, just like button clicks.
+export const reset = (model: Model) => update(model, Message.ClickedReset());
+
+export interface ViewInputs {
+  readonly label: string;
+}
+
+export const view = Submodel.defineView<Model, Message, ViewInputs>(
+  (model, { label }, h) => {
+    // Each view binds JSX to its own Message-typed Foldkit builder.
+    const jsx = createJsx(h);
+
+    return (
+      <section
+        attributes={[h.Class('counter'), h.Role('region'), h.AriaLabel(label)]}
+      >
+        <p attributes={[h.Class('eyebrow')]}>Independent submodel</p>
+        <h2>{label}</h2>
+        <p
+          attributes={[
+            h.Class('count'),
+            h.Role('status'),
+            h.AriaLive('polite'),
+          ]}
+        >
+          {model.count}
+        </p>
+        <div attributes={[h.Class('controls')]}>
+          <button
+            attributes={[
+              h.OnClick(Message.ClickedDecrement()),
+              h.AriaLabel('Decrement'),
+            ]}
+          >
+            −
+          </button>
+          <button
+            attributes={[h.OnClick(Message.ClickedReset()), h.Class('reset')]}
+          >
+            Reset
+          </button>
+          <button
+            attributes={[
+              h.OnClick(Message.ClickedIncrement()),
+              h.AriaLabel('Increment'),
+            ]}
+          >
+            +
+          </button>
+        </div>
+      </section>
+    );
+  },
+);

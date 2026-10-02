@@ -1,0 +1,105 @@
+import { Option, Schema } from 'effect';
+import { Update, type Runtime } from 'foldkit';
+import type { Document, HtmlBuilder } from 'foldkit/html';
+import { defineMessageUnion } from 'foldkit/message';
+import { createJsx } from '@causeeffect/foldkit-jsx';
+import * as Counter from './counter.gtsx';
+
+export const CounterId = Schema.Literals(['left', 'right']);
+export type CounterId = typeof CounterId.Type;
+
+export const Model = Schema.Struct({
+  left: Counter.Model,
+  right: Counter.Model,
+});
+export type Model = typeof Model.Type;
+
+export const Message = defineMessageUnion({
+  GotCounterMessage: { counterId: CounterId, message: Counter.Message },
+  ClickedResetAll: {},
+});
+export type Message = typeof Message.Type;
+
+const wrapCounterMessage =
+  (counterId: CounterId) => (message: Counter.Message) =>
+    Message.GotCounterMessage({ counterId, message });
+
+// The selected instance is read and written through Foldkit's normal child fold.
+const foldCounter = (counterId: CounterId) =>
+  Update.foldChild({
+    update: Counter.update,
+    read: (model: Model) => Option.some(model[counterId]),
+    write: (model, counter) => ({ ...model, [counterId]: counter }),
+    toParentMessage: wrapCounterMessage(counterId),
+  });
+
+const resetCounter = (counterId: CounterId) =>
+  Update.foldChildStep({
+    update: Counter.reset,
+    read: (model: Model) => Option.some(model[counterId]),
+    write: (model, counter) => ({ ...model, [counterId]: counter }),
+    toParentMessage: wrapCounterMessage(counterId),
+  });
+
+export const update = (model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message>>(message, {
+    GotCounterMessage: ({ counterId, message }) =>
+      foldCounter(counterId)(model, message),
+    ClickedResetAll: () =>
+      Update.combine(model, [resetCounter('left'), resetCounter('right')]),
+  });
+
+export const init: Runtime.ApplicationInit<Model, Message> = () => ({
+  model: { left: Counter.init(), right: Counter.init() },
+});
+
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
+  const jsx = createJsx(h);
+  const total = model.left.count + model.right.count;
+
+  return {
+    title: `Foldkit + gtsx · Total ${total}`,
+    body: (
+      <main attributes={[h.Class('app')]}>
+        <header>
+          <p attributes={[h.Class('eyebrow')]}>Foldkit × gtsx</p>
+          <h1>One view. Two independent counters.</h1>
+          <p attributes={[h.Class('intro')]}>
+            Each counter owns its model, messages, and update. JSX describes the
+            view; Foldkit routes the interactions.
+          </p>
+        </header>
+
+        <div attributes={[h.Class('counters')]}>
+          <jsx.Submodel
+            slotId="left"
+            model={model.left}
+            view={Counter.view}
+            viewInputs={{ label: 'Left counter' }}
+            toParentMessage={wrapCounterMessage('left')}
+          />
+          <jsx.Submodel
+            slotId="right"
+            model={model.right}
+            view={Counter.view}
+            viewInputs={{ label: 'Right counter' }}
+            toParentMessage={wrapCounterMessage('right')}
+          />
+        </div>
+
+        <footer attributes={[h.Class('summary')]}>
+          <p attributes={[h.Class('total'), h.Id('total')]}>
+            Combined total <strong>{total}</strong>
+          </p>
+          <button attributes={[h.OnClick(Message.ClickedResetAll())]}>
+            Reset both counters
+          </button>
+        </footer>
+
+        <aside attributes={[h.Class('note')]}>
+          Explore either counter, then reset both. Each keeps its own state.
+        </aside>
+      </main>
+    ),
+  };
+};

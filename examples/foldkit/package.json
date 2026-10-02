@@ -1,0 +1,31 @@
+{
+  "name": "@causeeffect/foldkit-example",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:dependencies": "pnpm --filter @causeeffect/jsx-content-mapper build && pnpm --filter @causeeffect/foldkit-jsx build",
+    "dev": "pnpm run build:dependencies && vite",
+    "build": "pnpm run build:dependencies && vite build",
+    "preview": "vite preview",
+    "typecheck": "pnpm run build:dependencies && node node_modules/typescript-next/bin/tsc -p tsconfig.json --noEmit --runExternalCode",
+    "test": "pnpm run build:dependencies && vitest run"
+  },
+  "dependencies": {
+    "@causeeffect/foldkit-jsx": "workspace:*",
+    "@effect/platform-browser": "4.0.0",
+    "effect": "4.0.0",
+    "foldkit": "0.165.0"
+  },
+  "devDependencies": {
+    "@causeeffect/jsx-content-mapper": "workspace:*",
+    "typescript-next": "npm:typescript@7.1.0-dev.20261002.1",
+    "vite": "^8.1.4",
+    "vitest": "~4.1.10"
+  },
+  "nx": {
+    "tags": [
+      "scope:foldkit-example"
+    ]
+  }
+}

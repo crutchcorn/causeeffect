@@ -72,6 +72,34 @@ importers:
         specifier: ~4.1.10
         version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(vite@8.3.1(@types/node@24.13.3)(jiti@2.4.2)(yaml@2.9.0))
 
+  examples/foldkit:
+    dependencies:
+      '@causeeffect/foldkit-jsx':
+        specifier: workspace:*
+        version: link:../../packages/foldkit-jsx
+      '@effect/platform-browser':
+        specifier: 4.0.0
+        version: 4.0.0(effect@4.0.0)
+      effect:
+        specifier: 4.0.0
+        version: 4.0.0
+      foldkit:
+        specifier: 0.165.0
+        version: 0.165.0(@effect/platform-browser@4.0.0(effect@4.0.0))(effect@4.0.0)
+    devDependencies:
+      '@causeeffect/jsx-content-mapper':
+        specifier: workspace:*
+        version: link:../../packages/jsx-content-mapper
+      typescript-next:
+        specifier: npm:typescript@7.1.0-dev.20261002.1
+        version: typescript@7.1.0-dev.20261002.1
+      vite:
+        specifier: ^8.1.4
+        version: 8.3.1(@types/node@24.13.3)(jiti@2.4.2)(yaml@2.9.0)
+      vitest:
+        specifier: ~4.1.10
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(vite@8.3.1(@types/node@24.13.3)(jiti@2.4.2)(yaml@2.9.0))
+
   packages/foldkit-jsx:
     devDependencies:
       '@effect/platform-browser':

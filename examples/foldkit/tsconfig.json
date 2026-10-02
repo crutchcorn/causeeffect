@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "lib": ["es2022", "dom", "esnext.disposable"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "types": ["vite/client", "node"]
+  },
+  "contentMappers": [
+    {
+      "package": "@causeeffect/jsx-content-mapper",
+      "extensions": [".gtsx"],
+      "options": {
+        "jsxRuntime": "classic",
+        "jsxFactory": "jsx.createElement",
+        "jsxFragmentFactory": "jsx.Fragment"
+      }
+    }
+  ],
+  "include": ["src"]
+}
