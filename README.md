@@ -11,9 +11,26 @@ The project is experimental. [Foldkit](https://foldkit.dev) is our first working
 example: write its Views and Submodels with JSX in **`.gtsx`** files, while keeping
 its typed models and messages.
 
-## Hello world
+## Foldkit before and after
 
-A Foldkit View in `view.gtsx` looks like this:
+Before, a Hello world View uses Foldkit's HTML helpers:
+
+```ts
+export function view(model: Model, h: HtmlBuilder<Message>): Document {
+  return {
+    title: 'Hello world',
+    body: h.main(
+      [h.Class('hello')],
+      [
+        h.h1([], ['Hello, ', model.name, '!']),
+        h.button([h.OnClick({ _tag: 'ClickedHello' })], ['Say hello']),
+      ],
+    ),
+  };
+}
+```
+
+After, the same View in `view.gtsx` uses JSX:
 
 ```tsx
 import { createJsx } from '@causeeffect/foldkit-jsx';
@@ -40,6 +57,36 @@ export function view(model: Model, h: HtmlBuilder<Message>): Document {
 Props use Foldkit's names, such as `Class`, `OnClick`, and `AriaLabel`. Event
 messages are checked against the View's Message type. Foldkit runs the application
 and handles updates; its Views remain ordinary synchronous functions.
+
+## Generator types before and after
+
+For generator components, the [generator JSX setup](packages/jsx-content-mapper/README.md#setup)
+preserves the types you get from a direct call when you use JSX:
+
+```tsx
+// greeting.gtsx
+import type { JSX } from '@causeeffect/jsx-content-mapper/runtime';
+
+type ViewElement = JSX.GeneratorElement<never, never, never>;
+
+function* Greeting(): Generator<number, ViewElement, string> {
+  const name = yield 123;
+  return <p>Hello, {name}!</p>;
+}
+
+// Before: calling the generator directly.
+const iterator = Greeting();
+// Generator<number, ViewElement, string>
+
+// After: using JSX with the content mapper.
+const element = <Greeting />;
+// JSX.GeneratorElement<number, ViewElement, string>
+```
+
+The yielded value is still a `number`, the return value is still a `ViewElement`,
+and the value sent back into the generator is still a `string`. Wrapping the
+component in JSX keeps all three types available to TypeScript. This generator
+example is separate from Foldkit's synchronous Views above.
 
 ## Install and run
 
