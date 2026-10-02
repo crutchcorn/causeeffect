@@ -127,6 +127,57 @@ can supply its own runtime via mapper options:
 That module must export `createElement`, `createComponent`, and `Fragment` with
 the same calling convention. It can specialize element types and intrinsic props.
 
+## Classic JSX factories
+
+For an existing UI runtime, opt into the conventional
+`factory(tag, props, ...children)` transform. This mode uses a factory in the
+source's lexical scope and leaves the resulting element type to that factory:
+
+```tsx
+import { createJsx } from 'my-framework/jsx';
+
+function view(model: Model, builder: Builder) {
+  const jsx = createJsx(builder);
+  return (
+    <main>
+      <Greeting name="Ada" />
+    </main>
+  );
+  // jsx.createElement('main', null,
+  //   jsx.createElement(Greeting, { name: 'Ada' }))
+}
+```
+
+```json
+{
+  "contentMappers": [
+    {
+      "package": "@causeeffect/jsx-content-mapper",
+      "extensions": [".gtsx"],
+      "options": {
+        "jsxRuntime": "classic",
+        "jsxFactory": "jsx.createElement",
+        "jsxFragmentFactory": "jsx.Fragment"
+      }
+    }
+  ]
+}
+```
+
+Factories can be identifiers or dotted references, following TypeScript's
+`jsxFactory` / `jsxFragmentFactory` and Babel's classic pragma convention. In
+classic mode the content mapper also reads these two compiler options when the
+corresponding mapper option is omitted. Defaults are `React.createElement` and
+`React.Fragment`. No runtime import is inserted; `runtimeModule` belongs to the
+generator mode and cannot be combined with classic mode.
+
+Elements without attributes receive `null` props. Rendered children become
+variadic arguments, and fragments use the configured fragment value. A
+`children` attribute remains in the props object, allowing the runtime to apply
+its own precedence rules. Explicit component type arguments are retained as
+TypeScript instantiation expressions, such as `Greeting<string>`. Type checking
+uses the factory's call signature, including its overloads and return type.
+
 ## Effect v4
 
 Effect is a development dependency only. The mapper keeps the actual yielded
@@ -170,6 +221,26 @@ TypeScript's current content mapper implementation
 [does not emit JavaScript for mapped files](https://github.com/microsoft/typescript-go/pull/4712).
 It can check them and emit declarations, named `example.d.gtsx.ts`, plus
 declaration maps pointing to the original `.gtsx` file.
+
+The package includes a Vite 8 plugin that uses the same transform and options,
+then erases TypeScript with Vite's Oxc transformer:
+
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite';
+import { gtsx } from '@causeeffect/jsx-content-mapper/vite';
+
+export default defineConfig({
+  plugins: [gtsx()], // Default generator mode; or pass classic options above.
+});
+```
+
+Use identical JSX options in the plugin and `contentMappers` configuration.
+The plugin supports development, production builds, dependency scanning,
+extensionless `.gtsx` imports, and source maps to the original files. Vite's
+`?raw` and `?url` imports retain their usual behavior. See
+[`examples/foldkit`](../../examples/foldkit) for a classic factory that binds to
+each view's typed builder; the mapper itself has no Foldkit dependency.
 
 Use the public transform in a build-tool integration, then transpile the returned
 TypeScript with TypeScript, Babel, SWC, or another TypeScript-aware tool:

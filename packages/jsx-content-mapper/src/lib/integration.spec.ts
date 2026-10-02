@@ -31,6 +31,7 @@ function runCompiler(compiler: string, directory: string, args: string[]) {
 
 interface ProjectOptions {
   mapperOptions?: Record<string, unknown>;
+  compilerOptions?: Record<string, unknown>;
   include?: string[];
 }
 
@@ -66,6 +67,7 @@ async function project(
         outDir: 'out',
         noEmitOnError: true,
         types: [],
+        ...options.compilerOptions,
       },
       contentMappers: [
         {
@@ -294,6 +296,78 @@ const expected: 42 = content;
     );
     expect(declaration).toContain('content: 42');
   });
+
+  it('uses standard classic factories and fragment values from compiler options', async () => {
+    const directory = await project(
+      {
+        'main.gtsx': `const Fragment = Symbol('fragment');
+const factory = {
+  createElement(tag: string | typeof Fragment, props: { count?: number } | null, ...children: ReadonlyArray<42 | string>) {
+    return 42 as const;
+  },
+  Fragment: Fragment as typeof Fragment,
+};
+export const content = <><p count={123}>Hello</p></>;
+const expected: 42 = content;
+`,
+      },
+      {
+        mapperOptions: { jsxRuntime: 'classic' },
+        compilerOptions: {
+          jsxFactory: 'factory.createElement',
+          jsxFragmentFactory: 'factory.Fragment',
+        },
+      },
+    );
+    const result = compile(directory);
+    expect(result.status, result.output).toBe(0);
+    const declaration = await readFile(
+      join(directory, 'out/main.d.gtsx.ts'),
+      'utf8',
+    );
+    expect(declaration).toContain('content: 42');
+  });
+
+  it('maps classic factory prop type errors to the original JSX attribute', async () => {
+    const directory = await project(
+      {
+        'main.gtsx': `const jsx = {
+  createElement(tag: string, props: { count: number }) { return tag; },
+};
+export const invalid = <p count="wrong" />;
+`,
+      },
+      {
+        mapperOptions: {
+          jsxRuntime: 'classic',
+          jsxFactory: 'jsx.createElement',
+        },
+      },
+    );
+    const result = compile(directory);
+    expect(result.status).not.toBe(0);
+    expect(result.output).toMatch(/main\.gtsx\(4,\d+\): error TS2322:/);
+    expect(result.output).toContain(
+      "Type 'string' is not assignable to type 'number'",
+    );
+  });
+
+  it.each([
+    { jsxRuntime: 'invalid' },
+    { jsxRuntime: 'classic', jsxFactory: 'factory()' },
+  ])(
+    'reports invalid classic options %j through mapper configuration diagnostics',
+    async (mapperOptions) => {
+      const directory = await project(
+        { 'main.gtsx': 'export {};' },
+        { mapperOptions },
+      );
+      const result = compile(directory);
+      expect(result.status).not.toBe(0);
+      expect(result.output).toMatch(/tsconfig\.json\(1,\d+\): error gtsx[45]:/);
+      expect(result.output).not.toContain('Content mapper process exited');
+    },
+  );
 
   it.each([123, '', '   '])(
     'reports an invalid runtimeModule option %j at tsconfig.json',

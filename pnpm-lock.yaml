@@ -80,6 +80,9 @@ importers:
       '@babel/types':
         specifier: ^7.29.0
         version: 7.29.8
+      '@jridgewell/gen-mapping':
+        specifier: ^0.3.13
+        version: 0.3.13
       ts-content-mapper:
         specifier: ^0.1.0
         version: 0.1.0
@@ -96,6 +99,9 @@ importers:
       typescript-next:
         specifier: npm:typescript@7.1.0-dev.20261002.1
         version: typescript@7.1.0-dev.20261002.1
+      vite:
+        specifier: ^8.1.4
+        version: 8.3.1(@types/node@24.13.3)(jiti@2.4.2)(yaml@2.9.0)
 
 packages:
 

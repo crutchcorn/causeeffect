@@ -1,31 +1,37 @@
 import { runContentMapper } from 'ts-content-mapper';
-import { transformGtsx, type GtsxOptions } from './lib/content-mapper.js';
+import {
+  transformGtsx,
+  validateGtsxOptions,
+  type GtsxOptions,
+} from './lib/content-mapper.js';
 
 runContentMapper<GtsxOptions>({
   diagnosticSource: 'gtsx',
   openProject(params) {
-    const runtimeModule = params.options?.runtimeModule;
-    if (
-      runtimeModule !== undefined &&
-      (typeof runtimeModule !== 'string' || !runtimeModule.trim())
-    ) {
-      return {
-        optionDiagnostics: [
-          {
-            path: ['runtimeModule'],
-            messageText: 'runtimeModule must be a nonempty module specifier.',
-            code: 3,
-          },
-        ],
-      };
-    }
-    return {};
+    return { optionDiagnostics: validateGtsxOptions(params.options ?? {}) };
   },
   transform(params, context) {
+    // The compiler may still ask for files after openProject reports bad options.
+    // Keep that request successful so the option diagnostics reach tsconfig.json.
+    if (validateGtsxOptions(context.openProjectParams.options ?? {}).length) {
+      return { text: 'export {};', extension: '.ts' };
+    }
     return transformGtsx(params.content, {
+      ...context.openProjectParams.options,
       fileName: params.fileName,
       positionEncoding: context.positionEncoding,
-      runtimeModule: context.openProjectParams.options?.runtimeModule,
+      ...(context.openProjectParams.options?.jsxRuntime === 'classic'
+        ? {
+            jsxFactory:
+              context.openProjectParams.options.jsxFactory ??
+              (context.openProjectParams.compilerOptions.jsxFactory as
+                string | undefined),
+            jsxFragmentFactory:
+              context.openProjectParams.options.jsxFragmentFactory ??
+              (context.openProjectParams.compilerOptions.jsxFragmentFactory as
+                string | undefined),
+          }
+        : {}),
     });
   },
 });

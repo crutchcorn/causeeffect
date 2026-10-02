@@ -23,6 +23,12 @@
       "import": "./dist/runtime.js",
       "default": "./dist/runtime.js"
     },
+    "./vite": {
+      "@causeeffect/source": "./src/vite.ts",
+      "types": "./dist/vite.d.ts",
+      "import": "./dist/vite.js",
+      "default": "./dist/vite.js"
+    },
     ".": {
       "@causeeffect/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
@@ -40,20 +46,33 @@
         "node",
         "dist/server.js"
       ],
-      "compilerOptions": [],
+      "compilerOptions": [
+        "jsxFactory",
+        "jsxFragmentFactory"
+      ],
       "dynamicConfig": false
     }
   },
   "dependencies": {
     "@babel/parser": "^7.29.9",
     "@babel/types": "^7.29.0",
+    "@jridgewell/gen-mapping": "^0.3.13",
     "ts-content-mapper": "^0.1.0",
     "tslib": "^2.3.0"
   },
   "devDependencies": {
     "effect": "4.0.0",
     "typescript": "~6.0.3",
-    "typescript-next": "npm:typescript@7.1.0-dev.20261002.1"
+    "typescript-next": "npm:typescript@7.1.0-dev.20261002.1",
+    "vite": "^8.1.4"
+  },
+  "peerDependencies": {
+    "vite": "^8.1.4"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
   },
   "nx": {
     "tags": [

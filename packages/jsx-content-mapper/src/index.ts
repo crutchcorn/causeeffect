@@ -1,4 +1,4 @@
-export { transformGtsx } from './lib/content-mapper.js';
+export { transformGtsx, validateGtsxOptions } from './lib/content-mapper.js';
 export type {
   GtsxOptions,
   TransformGtsxOptions,
