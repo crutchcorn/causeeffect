@@ -47,7 +47,9 @@ source, see the
 Trust the workspace, open a `.gtsx` file, and run
 **GTSX: Enable TypeScript Native Language Support** from the Command Palette.
 The command enables these settings in the current workspace, or in user settings
-when no workspace is open, then restarts Native Preview so it picks up Nightly:
+when no workspace is open. Native Preview starts automatically when the settings
+change. If both settings are already enabled, the command waits for the language
+server to initialize before restarting it to pick up Nightly:
 
 ```json
 {

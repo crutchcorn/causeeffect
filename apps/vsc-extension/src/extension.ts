@@ -1,11 +1,41 @@
 import * as vscode from 'vscode';
-import { isTypeScriptNativeApi } from './api.js';
+import { isTypeScriptNativeApi, type TypeScriptNativeApi } from './api.js';
 import { resolveContentMapper } from './mapper.js';
 
 const nativeExtensionId = 'TypeScriptTeam.native-preview';
 const nightlyExtensionId = 'TypeScriptTeam.vscode-typescript-nightly';
 const nativeRestartCommand = 'typescript.native-preview.restart';
 let disposeActivation: (() => void) | undefined;
+
+async function waitForNativeLanguageServer(
+  api: TypeScriptNativeApi,
+  signal: AbortSignal,
+) {
+  let subscription: vscode.Disposable | undefined;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  let cancel: (() => void) | undefined;
+  try {
+    await new Promise<void>((resolve, reject) => {
+      cancel = resolve;
+      signal.addEventListener('abort', cancel, { once: true });
+      timeout = setTimeout(
+        () =>
+          reject(
+            new Error(
+              'TypeScript Native Preview did not initialize within 30 seconds.',
+            ),
+          ),
+        30_000,
+      );
+      // The provider also invokes this listener immediately for a ready client.
+      subscription = api.onLanguageServerInitialized(resolve);
+    });
+  } finally {
+    if (cancel) signal.removeEventListener('abort', cancel);
+    clearTimeout(timeout);
+    subscription?.dispose();
+  }
+}
 
 export async function activate(
   context: vscode.ExtensionContext,
@@ -17,8 +47,11 @@ export async function activate(
   let warned = false;
   let warnedCompiler = false;
   let pending = Promise.resolve();
+  let nativeApi: TypeScriptNativeApi | undefined;
+  const activation = new AbortController();
   const dispose = () => {
     disposed = true;
+    activation.abort();
     registration?.dispose();
     registration = undefined;
   };
@@ -45,6 +78,7 @@ export async function activate(
       }
       return;
     }
+    nativeApi = api;
     const configuredSdk = vscode.workspace
       .getConfiguration('js/ts')
       .get<unknown>('tsdk.path');
@@ -139,13 +173,32 @@ export async function activate(
         ? vscode.ConfigurationTarget.Workspace
         : vscode.ConfigurationTarget.Global;
       const configuration = vscode.workspace.getConfiguration('js/ts');
-      await configuration.update('experimental.useTsgo', true, target);
-      await configuration.update('contentMappers.enabled', true, target);
+      const nativeSetting = configuration.inspect<boolean>(
+        'experimental.useTsgo',
+      );
+      // Set the command's target scope explicitly: a legacy typescript.*
+      // setting in this workspace can override an inherited js/ts.* value.
+      const nativeEnabled =
+        (target === vscode.ConfigurationTarget.Workspace
+          ? nativeSetting?.workspaceValue
+          : nativeSetting?.globalValue) === true;
+      const mappersEnabled =
+        configuration.get('contentMappers.enabled') === true;
+      // Queue the contribution before enabling the provider. Native Preview
+      // owns startup/restart when these settings change.
       await refresh();
       if (disposed || !vscode.workspace.isTrusted) return;
-      // Contributions persist across native server restarts. Restart explicitly
-      // even when the flags were already enabled, so a newly installed nightly
-      // replaces Native Preview's older bundled compiler.
+      if (!mappersEnabled)
+        await configuration.update('contentMappers.enabled', true, target);
+      if (disposed || !vscode.workspace.isTrusted) return;
+      if (!nativeEnabled)
+        await configuration.update('experimental.useTsgo', true, target);
+      if (disposed || !vscode.workspace.isTrusted) return;
+      if (!nativeEnabled || !mappersEnabled || !nativeApi) return;
+      // With unchanged settings, restart to pick up a newly installed Nightly.
+      // The restart command is registered before its language client exists.
+      await waitForNativeLanguageServer(nativeApi, activation.signal);
+      if (disposed || !vscode.workspace.isTrusted) return;
       const commands = await vscode.commands.getCommands(true);
       if (
         !disposed &&
@@ -154,8 +207,6 @@ export async function activate(
       ) {
         await vscode.commands.executeCommand(nativeRestartCommand);
       }
-      // A disabled provider has not registered its restart command yet. The
-      // setting change starts it with the contribution already queued above.
     }),
   );
   await refresh();

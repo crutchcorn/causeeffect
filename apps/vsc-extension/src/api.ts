@@ -1,4 +1,4 @@
-import type { Disposable, Uri } from 'vscode';
+import type { Disposable, Event, Uri } from 'vscode';
 
 /** Public API exported by TypeScriptTeam.native-preview. */
 export interface ContentMapperManifest {
@@ -19,6 +19,7 @@ export interface ContentMapperContribution {
 }
 
 export interface TypeScriptNativeApi {
+  readonly onLanguageServerInitialized: Event<void>;
   registerContentMappers(
     contributorId: string,
     contributions: readonly ContentMapperContribution[],
@@ -31,6 +32,8 @@ export function isTypeScriptNativeApi(
   return (
     typeof value === 'object' &&
     value !== null &&
+    'onLanguageServerInitialized' in value &&
+    typeof value.onLanguageServerInitialized === 'function' &&
     'registerContentMappers' in value &&
     typeof value.registerContentMappers === 'function'
   );

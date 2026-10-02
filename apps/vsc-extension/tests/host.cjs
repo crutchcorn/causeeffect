@@ -100,7 +100,7 @@ exports.run = async function run() {
     const expectedType =
       'JSX.GeneratorElement<number, JSX.GeneratorElement<never, never, never>, unknown>';
     let latestHover = '';
-    result.hover = await eventually('Generator-preserving hover', async () => {
+    const probeHover = async () => {
       const hovers = await vscode.commands.executeCommand(
         'vscode.executeHoverProvider',
         uri,
@@ -114,9 +114,20 @@ exports.run = async function run() {
         )
         .join('\n');
       return latestHover.includes(expectedType) ? latestHover : undefined;
-    }).catch((error) => {
-      throw new Error(`${error.message} Last hover: ${latestHover}`);
-    });
+    };
+    const readHover = (description) =>
+      eventually(description, probeHover).catch((error) => {
+        throw new Error(`${error.message} Last hover: ${latestHover}`);
+      });
+    result.hover = await readHover('Generator-preserving hover');
+    if (process.env.GTSX_HOST_ENABLE_COMMAND === '1') {
+      // Also exercise the explicit restart with both settings already enabled.
+      await vscode.commands.executeCommand('gtsx.enableLanguageSupport');
+      result.reenabledByCommand = true;
+      result.hover = await readHover(
+        'Generator-preserving hover after repeating Enable',
+      );
+    }
 
     const definition = await eventually(
       'Cross-file component definition',

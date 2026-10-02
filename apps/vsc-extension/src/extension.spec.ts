@@ -31,7 +31,12 @@ const host = vi.hoisted(() => {
     registrationDisposals.push(dispose);
     return { dispose };
   });
-  const nativeApi = { registerContentMappers };
+  const nativeInitialized = event();
+  const onLanguageServerInitialized = vi.fn((listener: () => void) => {
+    listener();
+    return nativeInitialized.register(listener);
+  });
+  const nativeApi = { registerContentMappers, onLanguageServerInitialized };
   const nativeExtension = {
     id: 'TypeScriptTeam.native-preview',
     isActive: true,
@@ -50,6 +55,7 @@ const host = vi.hoisted(() => {
     },
   };
   const settings = new Map<string, unknown>();
+  const globalSettings = new Map<string, unknown>();
   const update = vi.fn<
     (
       section: string,
@@ -69,6 +75,7 @@ const host = vi.hoisted(() => {
   return {
     uri,
     settings,
+    globalSettings,
     update,
     commands,
     output,
@@ -77,6 +84,8 @@ const host = vi.hoisted(() => {
     nightlyExtension,
     nativeApi,
     registerContentMappers,
+    nativeInitialized,
+    onLanguageServerInitialized,
     getExtension:
       vi.fn<
         (
@@ -170,7 +179,17 @@ vi.mock('vscode', () => ({
     onDidGrantWorkspaceTrust: host.trustGranted.register,
     getConfiguration: (section: string) => ({
       get: (key: string, fallback?: unknown) =>
-        host.settings.get(`${section}.${key}`) ?? fallback,
+        host.settings.get(`${section}.${key}`) ??
+        host.globalSettings.get(`${section}.${key}`) ??
+        fallback,
+      inspect: (key: string) => ({
+        workspaceValue: host.folders.length
+          ? host.settings.get(`${section}.${key}`)
+          : undefined,
+        globalValue: host.folders.length
+          ? host.globalSettings.get(`${section}.${key}`)
+          : host.settings.get(`${section}.${key}`),
+      }),
       has: (key: string) => host.settings.has(`${section}.${key}`),
       update: (key: string, value: unknown, target?: unknown) =>
         host.update(section, key, value, target),
@@ -190,12 +209,19 @@ beforeEach(() => {
   vi.clearAllMocks();
   host.commands.clear();
   host.settings.clear();
+  host.globalSettings.clear();
   host.settings.set('js/ts.experimental.useTsgo', true);
   host.settings.set('js/ts.contentMappers.enabled', true);
   host.registrationDisposals.length = 0;
   host.isTrusted = true;
   host.folders = [{ name: 'project', index: 0, uri: host.uri('/project') }];
   host.nativeExtension.exports = host.nativeApi;
+  host.getCommands.mockResolvedValue(['typescript.native-preview.restart']);
+  host.executeCommand.mockReset().mockResolvedValue(undefined);
+  host.onLanguageServerInitialized.mockImplementation((listener) => {
+    listener();
+    return host.nativeInitialized.register(listener);
+  });
   host.getExtension.mockImplementation((id) =>
     id === 'TypeScriptTeam.native-preview'
       ? host.nativeExtension
@@ -209,6 +235,7 @@ beforeEach(() => {
     host.foldersChanged,
     host.trustGranted,
     host.extensionsChanged,
+    host.nativeInitialized,
   ])
     event.listeners.clear();
   context = {
@@ -347,6 +374,7 @@ describe('GTSX extension activation', () => {
 
   it('enables native TypeScript only in response to the explicit command', async () => {
     host.settings.set('js/ts.experimental.useTsgo', false);
+    host.settings.set('js/ts.contentMappers.enabled', false);
     await activate();
     expect(host.update).not.toHaveBeenCalled();
     const enable = host.commands.get('gtsx.enableLanguageSupport');
@@ -358,6 +386,14 @@ describe('GTSX extension activation', () => {
       true,
       2,
     );
+    expect(host.update.mock.calls.map((call) => call[1])).toEqual([
+      'contentMappers.enabled',
+      'experimental.useTsgo',
+    ]);
+    expect(
+      host.registerContentMappers.mock.invocationCallOrder.at(-1),
+    ).toBeLessThan(host.update.mock.invocationCallOrder[0] ?? 0);
+    expect(host.executeCommand).not.toHaveBeenCalled();
     expect(host.update).toHaveBeenCalledWith(
       'js/ts',
       'contentMappers.enabled',
@@ -404,6 +440,8 @@ describe('GTSX extension activation', () => {
 
   it('enables language support globally only when no workspace is open', async () => {
     host.folders = [];
+    host.settings.set('js/ts.experimental.useTsgo', false);
+    host.settings.set('js/ts.contentMappers.enabled', false);
     await activate();
     await host.commands.get('gtsx.enableLanguageSupport')?.();
     expect(host.update).toHaveBeenCalledWith(
@@ -436,10 +474,127 @@ describe('GTSX extension activation', () => {
     expect(host.executeCommand).toHaveBeenCalledWith(
       'typescript.native-preview.restart',
     );
+    expect(host.update).not.toHaveBeenCalled();
+    expect(host.nativeInitialized.listeners.size).toBe(0);
+  });
+
+  it.each(['experimental.useTsgo', 'contentMappers.enabled'])(
+    'leaves the setting-driven restart to Native Preview when %s is disabled',
+    async (setting) => {
+      host.settings.set(`js/ts.${setting}`, false);
+      host.executeCommand.mockRejectedValueOnce(
+        new Error('Language client is not initialized'),
+      );
+      await activate();
+      await expect(
+        host.commands.get('gtsx.enableLanguageSupport')?.(),
+      ).resolves.toBeUndefined();
+      expect(host.update).toHaveBeenCalledTimes(1);
+      expect(host.update).toHaveBeenCalledWith('js/ts', setting, true, 2);
+      expect(host.getCommands).not.toHaveBeenCalled();
+      expect(host.executeCommand).not.toHaveBeenCalled();
+    },
+  );
+
+  it('waits for a starting client before restarting with already enabled settings', async () => {
+    host.onLanguageServerInitialized.mockImplementation((listener) =>
+      host.nativeInitialized.register(listener),
+    );
+    await activate();
+    const enabling = host.commands.get('gtsx.enableLanguageSupport')?.();
+    await vi.waitFor(() =>
+      expect(host.nativeInitialized.listeners.size).toBe(1),
+    );
+    expect(host.executeCommand).not.toHaveBeenCalled();
+    await host.nativeInitialized.emit();
+    await enabling;
+    expect(host.executeCommand).toHaveBeenCalledWith(
+      'typescript.native-preview.restart',
+    );
+    expect(host.nativeInitialized.listeners.size).toBe(0);
+  });
+
+  it('propagates an initialized provider restart failure', async () => {
+    await activate();
+    host.executeCommand.mockRejectedValueOnce(new Error('Compiler crashed'));
+    await expect(
+      host.commands.get('gtsx.enableLanguageSupport')?.(),
+    ).rejects.toThrow('Compiler crashed');
+  });
+
+  it('cancels a pending initialization wait when the extension is disposed', async () => {
+    host.onLanguageServerInitialized.mockImplementation((listener) =>
+      host.nativeInitialized.register(listener),
+    );
+    await activate();
+    const enabling = host.commands.get('gtsx.enableLanguageSupport')?.();
+    await vi.waitFor(() =>
+      expect(host.nativeInitialized.listeners.size).toBe(1),
+    );
+    await extension?.deactivate();
+    await enabling;
+    expect(host.nativeInitialized.listeners.size).toBe(0);
+    expect(host.getCommands).not.toHaveBeenCalled();
+    expect(host.executeCommand).not.toHaveBeenCalled();
+  });
+
+  it('reports initialization timeout without restarting and removes the listener', async () => {
+    host.onLanguageServerInitialized.mockImplementation((listener) =>
+      host.nativeInitialized.register(listener),
+    );
+    await activate();
+    vi.useFakeTimers();
+    try {
+      const enabling = host.commands.get('gtsx.enableLanguageSupport')?.();
+      const assertion = expect(enabling).rejects.toThrow(
+        'did not initialize within 30 seconds',
+      );
+      await vi.advanceTimersByTimeAsync(30_000);
+      await assertion;
+      expect(host.nativeInitialized.listeners.size).toBe(0);
+      expect(host.executeCommand).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not enable settings after disposal during mapper refresh', async () => {
+    host.settings.set('js/ts.experimental.useTsgo', false);
+    host.settings.set('js/ts.contentMappers.enabled', false);
+    await activate();
+    let resolveMapper: ((value: typeof host.resolved) => void) | undefined;
+    host.resolveContentMapper.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveMapper = resolve;
+      }),
+    );
+    const enabling = host.commands.get('gtsx.enableLanguageSupport')?.();
+    await vi.waitFor(() => expect(resolveMapper).toBeDefined());
+    await extension?.deactivate();
+    resolveMapper?.(host.resolved);
+    await enabling;
+    expect(host.update).not.toHaveBeenCalled();
+    expect(host.executeCommand).not.toHaveBeenCalled();
+  });
+
+  it('sets the workspace flag when an inherited true value can be overridden by legacy settings', async () => {
+    host.settings.delete('js/ts.experimental.useTsgo');
+    host.globalSettings.set('js/ts.experimental.useTsgo', true);
+    host.settings.set('typescript.experimental.useTsgo', false);
+    await activate();
+    await host.commands.get('gtsx.enableLanguageSupport')?.();
+    expect(host.update).toHaveBeenCalledWith(
+      'js/ts',
+      'experimental.useTsgo',
+      true,
+      2,
+    );
+    expect(host.update).toHaveBeenCalledTimes(1);
+    expect(host.settings.get('js/ts.experimental.useTsgo')).toBe(true);
+    expect(host.executeCommand).not.toHaveBeenCalled();
   });
 
   it('does not call an unavailable restart command when Native Preview has not started', async () => {
-    host.settings.set('js/ts.experimental.useTsgo', false);
     host.getCommands.mockResolvedValueOnce([]);
     await activate();
     await expect(

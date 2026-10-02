@@ -25,6 +25,37 @@ import { homedir, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+async function printFailureLogs(temporary) {
+  const logDirectory = join(temporary, 'user-data/logs');
+  const extensionLogs = await readdir(logDirectory, { recursive: true }).catch(
+    () => [],
+  );
+  const files = [
+    join(temporary, 'result.json'),
+    join(temporary, 'code.log'),
+    ...extensionLogs
+      .filter(
+        (name) =>
+          name.endsWith('.log') &&
+          (name.includes('TypeScriptTeam.native-preview') ||
+            name.endsWith('GTSX.log') ||
+            name.endsWith('exthost.log')),
+      )
+      .sort()
+      .map((name) => join(logDirectory, name)),
+  ];
+  for (const file of files) {
+    const contents = await readFile(file, 'utf8').catch(() => '');
+    if (!contents) continue;
+    const limit = 20_000;
+    const excerpt =
+      contents.length > limit
+        ? `${contents.slice(0, limit / 2)}\n... ${contents.length - limit} characters omitted; full log is preserved in ${file} ...\n${contents.slice(-limit / 2)}`
+        : contents;
+    console.error(`VS Code failure log: ${file}\n${excerpt}`);
+  }
+}
+
 export async function runHostSmokeTest(validateResult) {
   const extensionRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
   const require = createRequire(import.meta.url);
@@ -223,7 +254,7 @@ export const invalid = <Counter count="wrong" />;
     try {
       await new Promise((accept, reject) => {
         child.once('error', reject);
-        child.once('exit', (code, signal) =>
+        child.once('close', (code, signal) =>
           code === 0
             ? accept()
             : reject(
@@ -251,6 +282,9 @@ export const invalid = <Counter count="wrong" />;
     );
     console.log(result.hover);
     passed = true;
+  } catch (error) {
+    await printFailureLogs(temporary);
+    throw error;
   } finally {
     if (passed && process.env.KEEP_HOST_TEST_ARTIFACTS !== '1') {
       await rm(temporary, { recursive: true, force: true });

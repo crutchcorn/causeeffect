@@ -28,6 +28,7 @@ test('supports generator JSX in a real VS Code extension host', async () => {
     if (process.env.HOST_TEST_ENABLE_COMMAND !== '0') {
       expect(result.nativeEnabledBeforeCommand).toBe(false);
       expect(result.enabledByCommand).toBe(true);
+      expect(result.reenabledByCommand).toBe(true);
       expect(result.nativeEnabledAfterCommand).toBe(true);
       expect(result.contentMappersEnabledAfterCommand).toBe(true);
       if (process.env.HOST_TEST_COMPILER !== 'nightly') {

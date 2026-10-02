@@ -142,4 +142,16 @@ jobs:
         env:
           HOST_PROJECTS: ${{ needs.checks.outputs.host-projects }}
           CODE_BINARY: code
+          TMPDIR: ${{ runner.temp }}
         run: xvfb-run --auto-servernum pnpm exec nx run-many -t package --projects="$HOST_PROJECTS"
+      - name: Preserve VS Code host failure logs
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: gtsx-host-logs
+          path: |
+            ${{ runner.temp }}/gtsx-host-*/code.log
+            ${{ runner.temp }}/gtsx-host-*/result.json
+            ${{ runner.temp }}/gtsx-host-*/user-data/logs/**/*.log
+          if-no-files-found: ignore
+          retention-days: 7
