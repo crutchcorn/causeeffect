@@ -1,6 +1,6 @@
 {
   "name": "@causeeffect/jsx-content-mapper",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "description": "TypeScript content mapper for generator-preserving JSX in .gtsx files",
   "engines": {
