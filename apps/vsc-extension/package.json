@@ -98,6 +98,7 @@
     "build": "node scripts/build.mjs",
     "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.json",
     "test": "vitest run",
+    "test:host": "node scripts/test-host.mjs",
     "lint": "eslint .",
     "vscode:prepublish": "pnpm run typecheck && pnpm run build",
     "package": "vsce package --no-dependencies --allow-missing-repository --out dist/gtsx.vsix"
